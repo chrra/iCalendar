@@ -1,0 +1,22 @@
+name:                iCalendar
+version:             0.1.0.0
+synopsis:            iCalendar data types, parser, and printer.
+homepage:            http://github.com/tingtun/iCalendar
+license:             BSD3
+license-file:        LICENSE
+author:              Christian Rødli Amble
+maintainer:          cra+code@cra.no
+copyright:           (c) Tingtun
+category:            Text, Data
+build-type:          Simple
+cabal-version:       >=1.8
+
+library
+  exposed-modules:     Text.ICalendar.Types
+                     , Text.ICalendar.Parser
+                     , Text.ICalendar
+  build-depends:       base ==4.*, time ==1.4.*, data-default >=0.3
+                     , case-insensitive ==0.4.*, network ==2.4.*
+                     , bytestring >=0.10 && < 0.11, parsec ==3.1.*
+                     , text, containers >= 0.4 && < 0.6, mime ==0.3.*
+                     , mtl ==2.1.*
