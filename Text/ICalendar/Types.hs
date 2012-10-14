@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | ICalendar types, based on RFC5545.
-module Text.ICalendar.Types where
+module Text.ICalendar.Types
+    ( module Text.ICalendar.Types
+    ) where
 
 import Codec.MIME.Type (MIMEType)
-import Data.ByteString.Char8 (ByteString)
+import Data.ByteString.Lazy.Char8 (ByteString)
 import Data.CaseInsensitive (CI)
 import Data.Default
 import Data.Set (Set)
@@ -29,19 +31,19 @@ data OtherParams = OtherParams (Set OtherParam)
 instance Default OtherParams where
     def = OtherParams def
 
--- | VCalendar component, 3.4
+-- | VCalendar component, 3.4.
 data VCalendar = VCalendar
-    { vcProdId    :: ProdId
-    , vcVersion   :: ICalVersion
-    , vcScale     :: Scale
-    , vcMethod    :: Maybe Method
-    , vcOther     :: OtherParams
-    , vcTimeZones :: Set VTimeZone
-    , vcEvents    :: Set VEvent
-    , vcTodos     :: Set VTodo
-    , vcJournal   :: Set VJournal
-    , vcFreeBusy  :: Set VFreeBusy
-    , vcOtherComp :: Set VOther
+    { vcProdId     :: ProdId
+    , vcVersion    :: ICalVersion
+    , vcScale      :: Scale
+    , vcMethod     :: Maybe Method
+    , vcOther      :: Set OtherProperty
+    , vcTimeZones  :: Set VTimeZone
+    , vcEvents     :: Set VEvent
+    , vcTodos      :: Set VTodo
+    , vcJournals   :: Set VJournal
+    , vcFreeBusys  :: Set VFreeBusy
+    , vcOtherComps :: Set VOther
     } deriving (Show, Eq, Ord, Typeable)
 
 instance Default VCalendar where
@@ -49,13 +51,13 @@ instance Default VCalendar where
                     (MaxICalVersion (Version [2,0] []) def)
                     def Nothing def def def def def def def
 
--- | 3.7.3
+-- | 3.7.3.
 data ProdId = ProdId
     { prodIdValue :: Text
     , prodIdOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | 3.7.4
+-- | 3.7.4.
 data ICalVersion
     = MaxICalVersion
     { versionMax   :: Version
@@ -67,8 +69,8 @@ data ICalVersion
     , versionOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | 3.7.1
-data Scale = Scale 
+-- | 3.7.1.
+data Scale = Scale
     { scaleValue :: CI Text
     , scaleOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -76,12 +78,13 @@ data Scale = Scale
 instance Default Scale where
     def = Scale "GREGORIAN" def
 
--- | 3.7.2
+-- | 3.7.2.
 data Method = Method
     { methodValue :: CI Text -- TODO: iTIP, RFC5546
     , methodOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | 3.6.1.
 data VEvent = VEvent
     { veDTStamp       :: DTStamp
     , veUID           :: UID
@@ -97,19 +100,19 @@ data VEvent = VEvent
     , veSeq           :: Sequence -- def = 0
     , veStatus        :: Maybe StatusEvent
     , veSummary       :: Maybe Summary
-    , veTransp        :: Transp -- def = Opaque
+    , veTransp        :: TimeTransparency -- def = Opaque
     , veUrl           :: Maybe URL
     , veRecurId       :: Maybe RecurrenceId
     , veRRule         :: Set RRule
-    , veDTEndDuration :: Either DTEnd Duration
+    , veDTEndDuration :: Maybe (Either DTEnd DurationProp)
     , veAttach        :: Set Attachment
     , veAttendee      :: Set Attendee
-    , veCategories    :: Set Category
+    , veCategories    :: Set Categories
     , veComment       :: Set Comment
     , veContact       :: Set Contact
-    , veExdate        :: Set ExDate
+    , veExDate        :: Set ExDate
     , veRStatus       :: Set RequestStatus
-    , veRelated       :: Set Related
+    , veRelated       :: Set RelatedTo
     , veResources     :: Set Resources
     , veRDate         :: Set RDate
     , veAlarms        :: Set VAlarm
@@ -136,15 +139,15 @@ data VTodo = VTodo
     , vtSummary       :: Maybe Summary
     , vtUrl           :: Maybe URL
     , vtRRule         :: Set RRule
-    , vtDueDuration   :: Either Due Duration
+    , vtDueDuration   :: Maybe (Either Due DurationProp)
     , vtAttach        :: Set Attachment
     , vtAttendee      :: Set Attendee
-    , vtCategories    :: Set Category
+    , vtCategories    :: Set Categories
     , vtComment       :: Set Comment
     , vtContact       :: Set Contact
     , vtExDate        :: Set ExDate
     , vtRStatus       :: Set RequestStatus
-    , vtRelated       :: Set Related
+    , vtRelated       :: Set RelatedTo
     , vtResources     :: Set Resources
     , vtRDate         :: Set RDate
     , vtAlarms        :: Set VAlarm
@@ -167,12 +170,12 @@ data VJournal = VJournal
     , vjRRule         :: Set RRule
     , vjAttach        :: Set Attachment
     , vjAttendee      :: Set Attendee
-    , vjCategories    :: Set Category
+    , vjCategories    :: Set Categories
     , vjComment       :: Set Comment
     , vjContact       :: Set Contact
     , vjDescription   :: Set Description
     , vjExDate        :: Set ExDate
-    , vjRelated       :: Set Related
+    , vjRelated       :: Set RelatedTo
     , vjRDate         :: Set RDate
     , vjRStatus       :: Set RequestStatus
     , vjOther         :: Set OtherProperty
@@ -193,7 +196,7 @@ data VFreeBusy = VFreeBusy
     , vfbOther         :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Time Zone Component. 3.6.5
+-- | Time Zone Component. 3.6.5.
 data VTimeZone = VTimeZone
     { vtzId            :: TZID
     , vtzLastMod       :: Maybe LastModified
@@ -203,39 +206,52 @@ data VTimeZone = VTimeZone
     , vtzOther         :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Time zone property, also 3.6.5
+-- | Time zone property, also 3.6.5.
 data TZProp = TZProp
     { tzpDTStart      :: DTStart
     , tzpTZOffsetTo   :: UTCOffset
     , tzpTZOffsetFrom :: UTCOffset
-    , tzpRRule        :: Set RRule -- Should, but could.
+    , tzpRRule        :: Set RRule -- SHOULD NOT have multiple RRules.
     , tzpComment      :: Set Comment
     , tzpRDate        :: Set RDate
     , tzpTZName       :: Set TZName
     , tzpOther        :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | VAlarm component. 3.6.6.
 data VAlarm
     = VAlarmAudio
-    { vaTrigger        :: Trigger
-    , vaDurationRepeat :: Maybe (Duration, Repeat)
-    , vaAudioAttach    :: Maybe Attachment
-    , vaOther          :: Set OtherProperty
+    { vaTrigger     :: Trigger
+    , vaRepeat      :: Repeat
+    , vaDuration    :: Maybe DurationProp
+    , vaAudioAttach :: Maybe Attachment
+    , vaOther       :: Set OtherProperty
+    , vaActionOther :: OtherParams
     }
     | VAlarmDisplay
-    { vaDescription    :: Description
-    , vaTrigger        :: Trigger
-    , vaDurationRepeat :: Maybe (Duration, Repeat)
-    , vaOther          :: Set OtherProperty
+    { vaDescription :: Description
+    , vaTrigger     :: Trigger
+    , vaRepeat      :: Repeat
+    , vaDuration    :: Maybe DurationProp
+    , vaOther       :: Set OtherProperty
+    , vaActionOther :: OtherParams
     }
-    | VAlarmEMail
-    { vaDescription    :: Description
-    , vaTrigger        :: Trigger
-    , vaSummary        :: Summary
-    , vaAttendee       :: Set Attendee
-    , vaDurationRepeat :: Maybe (Duration, Repeat)
-    , vaMailAttach     :: Set Attachment
-    , vaOther          :: Set OtherProperty
+    | VAlarmEmail
+    { vaDescription :: Description
+    , vaTrigger     :: Trigger
+    , vaSummary     :: Summary
+    , vaAttendee    :: Set Attendee
+    , vaRepeat      :: Repeat
+    , vaDuration    :: Maybe DurationProp
+    , vaMailAttach  :: Set Attachment
+    , vaOther       :: Set OtherProperty
+    , vaActionOther :: OtherParams
+    }
+    | VAlarmX
+    { vaAction      :: CI Text
+    , vaTrigger     :: Trigger
+    , vaActionOther :: OtherParams
+    , vaOther       :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 data VOther = VOther
@@ -243,6 +259,7 @@ data VOther = VOther
     , veProps :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Attachment. 3.8.1.1.
 data Attachment
     = UriAttachment
     { attachFmtType :: Maybe MIMEType
@@ -255,35 +272,41 @@ data Attachment
     , attachOther   :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
-data Category = Category
-    { categoryValues   :: Set Text
-    , categoryLanguage :: Maybe Language
-    , categoryOther    :: OtherParams
+-- | Categories. 3.8.1.2.
+data Categories = Categories
+    { categoriesValues   :: Set Text
+    , categoriesLanguage :: Maybe Language
+    , categoriesOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Classification. 3.8.1.3.
 data Class = Class
     { classValue :: ClassValue
     , classOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
-data Completed = Completed
-    { completedValue :: DateTime
-    , completedOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable)
-
 instance Default Class where
     def = Class def def
 
+-- | Classification value. 3.8.1.3.
+-- Unrecognized ClassValueX MUST be treated as Private.
 data ClassValue
     = Public
     | Private
     | Confidential
-    | ClassValueX Text
+    | ClassValueX (CI Text)
       deriving (Show, Eq, Ord, Typeable)
 
 instance Default ClassValue where
     def = Public
 
+-- | TODO: Date-Time Completed. 3.8.2.1.
+data Completed = Completed
+    { completedValue :: DateTime
+    , completedOther :: OtherParams
+    } deriving (Show, Eq, Ord, Typeable)
+
+-- | Comment. 3.8.1.4.
 data Comment = Comment
     { commentValue    :: Text
     , commentAltRep   :: Maybe URI
@@ -291,6 +314,7 @@ data Comment = Comment
     , commentOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Description. 3.8.1.5.
 data Description = Description
     { descriptionValue    :: Text
     , descriptionAltRep   :: Maybe URI
@@ -298,12 +322,14 @@ data Description = Description
     , descriptionOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Geographic Position. 3.8.1.6.
 data Geo = Geo
     { geoLat   :: Float
     , geoLong  :: Float
     , geoOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Location. 3.8.1.7.
 data Location = Location
     { locationValue    :: Text
     , locationAltRep   :: Maybe URI
@@ -311,11 +337,13 @@ data Location = Location
     , locationOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Percent complete. 3.8.1.8.
 data Percent = Percent
     { percentValue :: Int
     , percentOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Priority. 3.8.1.9.
 data Priority = Priority
     { priorityValue :: Int
     , priorityOther :: OtherParams
@@ -324,6 +352,7 @@ data Priority = Priority
 instance Default Priority where
     def = Priority 0 def
 
+-- | Resources. 3.8.1.10.
 data Resources = Resources
     { resourcesValue    :: Set Text
     , resourcesAltRep   :: Maybe URI
@@ -331,25 +360,28 @@ data Resources = Resources
     , resourcesOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Status, but only for Events. 3.8.1.11.
 data StatusEvent
-    = TentativeEvent
-    | ConfirmedEvent
-    | CancelledEvent
+    = TentativeEvent OtherParams
+    | ConfirmedEvent OtherParams
+    | CancelledEvent OtherParams
       deriving (Show, Eq, Ord, Typeable)
 
+-- | Status, but only for TODOs. 3.8.1.11.
 data StatusTodo
-    = TodoNeedsAction
-    | CompletedTodo
-    | InProgress
-    | CancelledTodo
+    = TodoNeedsAction OtherParams
+    | CompletedTodo OtherParams
+    | InProcessTodo OtherParams
+    | CancelledTodo OtherParams
       deriving (Show, Eq, Ord, Typeable)
 
 data StatusJournal
-    = Draft
-    | Final
-    | CancelledJournal
+    = Draft OtherParams
+    | Final OtherParams
+    | CancelledJournal OtherParams
       deriving (Show, Eq, Ord, Typeable)
 
+-- | Summary. 3.8.1.12.
 data Summary = Summary
     { summaryValue    :: Text
     , summaryAltRep   :: Maybe URI
@@ -361,7 +393,7 @@ data Date = Date
     { dateValue :: Day
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Date-Time value. 3.3.5
+-- | Date-Time value. 3.3.5.
 data DateTime
     = FloatingDateTime
     { dateTimeFloating :: LocalTime
@@ -391,9 +423,10 @@ data Due
     }
     | DueDate
     { dueDateValue     :: Date
-    , duether          :: OtherParams
+    , dueOther         :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Date-Time Start. 3.8.2.4.
 data DTStart
     = DTStartDateTime
     { dtStartDateTimeValue :: DateTime
@@ -404,7 +437,8 @@ data DTStart
     , dtStartOther         :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
-data Duration
+-- | Duration value. 3.3.6.
+data Duration -- TODO(?): Convert to DiffTime?
     = DurationDate
     { durSign   :: Sign
     , durDay    :: Int
@@ -429,16 +463,25 @@ data Sign = Positive | Negative
 instance Default Sign where
     def = Positive
 
+-- | Duration property. 3.8.2.5.
+data DurationProp = DurationProp
+    { durationValue :: Duration
+    , durationOther :: OtherParams
+    } deriving (Show, Eq, Ord, Typeable)
+
 data FreeBusy = FreeBusy
     { freeBusyType   :: FBType
     , freeBusyPeriod :: Period
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Period of time. 3.3.9.
 data Period
     = PeriodDates    UTCTime UTCTime
     | PeriodDuration UTCTime Duration
       deriving (Show, Eq, Ord, Typeable)
 
+-- | Free/Busy Time Type. 3.2.9.
+-- Unrecognized FBTypeX MUST be treated as Busy.
 data FBType
     = Free
     | Busy
@@ -450,40 +493,43 @@ data FBType
 instance Default FBType where
     def = Busy
 
-data Transp
+-- | Time Transparency. 3.8.2.7.
+data TimeTransparency
     = Opaque      { transpOther :: OtherParams }
     | Transparent { transpOther :: OtherParams }
       deriving (Show, Eq, Ord, Typeable)
 
-instance Default Transp where
+instance Default TimeTransparency where
     def = Opaque def
 
--- | Time Zone Identifier. 3.8.3.1
+-- | Time Zone Identifier. 3.8.3.1.
 data TZID = TZID
     { tzidValue  :: Text
     , tzidGlobal :: Bool
     , tzidOther  :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Time Zone Name. 3.8.3.2.
 data TZName = TZName
     { tzNameValue    :: Text
     , tzNameLanguage :: Maybe Language
     , tzNameOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | UTC Offset. 3.3.14, 3.8.3.4, and 3.8.3.3 (unified-ish)
+-- | UTC Offset. 3.3.14, 3.8.3.4, and 3.8.3.3. (unified-ish)
 data UTCOffset = UTCOffset
     { utcOffsetValue :: Int -- ^ Number of seconds away from UTC
     , utcOffsetOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Time Zone URL. 3.8.3.5
+-- | Time Zone URL. 3.8.3.5.
 data TZUrl = TZUrl
     { tzUrlValue :: URI
     , tzUrlOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 
+-- | Attendee. 3.8.4.1.
 data Attendee = Attendee
     { attendeeValue    :: CalAddress
     , attendeeCUType   :: CUType
@@ -500,6 +546,8 @@ data Attendee = Attendee
     , attendeeOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Calendar User Type. 3.2.3.
+-- Unrecognized CUTypeX MUST be treated as Unknown.
 data CUType
     = Individual
     | Group
@@ -512,6 +560,7 @@ data CUType
 instance Default CUType where
     def = Individual
 
+-- | Role. 3.2.16.
 data Role = Chair
           | ReqParticipant
           | OptParticipant
@@ -522,6 +571,7 @@ data Role = Chair
 instance Default Role where
     def = ReqParticipant
 
+-- | Participation Status. 3.2.12.
 data PartStat -- Splitting requires splitting attendee too...
     = PartStatNeedsAction
     | Accepted
@@ -536,6 +586,7 @@ data PartStat -- Splitting requires splitting attendee too...
 instance Default PartStat where
     def = PartStatNeedsAction
 
+-- | Contact. 3.8.4.2.
 data Contact = Contact
     { contactValue    :: Text
     , contactAltRep   :: Maybe URI
@@ -543,56 +594,76 @@ data Contact = Contact
     , contactOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Organizer. 3.8.4.3.
+-- TODO: CAL-ADDRESS-related properties.
 data Organizer = Organizer
     { organizerValue    :: CalAddress
-    , organiserCN       :: Maybe Text
+    , organizerCN       :: Maybe Text
     , organizerDir      :: Maybe URI
     , organizerSentBy   :: Maybe CalAddress
     , organizerLanguage :: Maybe Language
     , organizerOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Recurrence ID. 3.8.4.4.
 data RecurrenceId
     = RecurrenceIdDate
     { recurrenceIdDate  :: Date
+    , recurrenceRange   :: Range
     , recurrenceIdOther :: OtherParams
     }
     | RecurrenceIdDateTime
     { recurrenceIdDateTime :: DateTime
+    , recurrenceRange      :: Range
     , recurrenceIdOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
-data Related = Related
-    { relatedValue :: UID
-    , relatedType  :: Relation
+-- | Recurrence Identifier Range. 3.2.13
+data Range = ThisAndFuture | ThisAndPrior
+             deriving (Show, Eq, Ord, Typeable)
+
+instance Default Range where
+    def = ThisAndFuture
+
+-- | Related To. 3.8.4.5.
+data RelatedTo = RelatedTo
+    { relatedToValue :: Text
+    , relatedToType  :: RelationshipType
+    , relatedToOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
-data Relation = Parent | Sibling | Child | OtherRelation Text
-                deriving (Show, Eq, Ord, Typeable)
+-- | Relationship Type. 3.2.15.
+-- Unrecognized RelationshipTypeX values MUST be treated as Parent.
+data RelationshipType = Parent | Child | Sibling | RelationshipTypeX (CI Text)
+                        deriving (Show, Eq, Ord, Typeable)
 
-instance Default Relation where
+instance Default RelationshipType where
     def = Parent
 
+-- | Uniform Resource Locator. 3.8.4.6.
 data URL = URL
     { urlValue :: URI
     , urlOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Unique Identifier. 3.8.4.7.
 data UID = UID
     { uidValue :: Text
     , uidOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Exception Date-Times. 3.8.5.1.
 data ExDate
     = ExDate
-    { exDate  :: Date
+    { exDate  :: Set Date
     , exOther :: OtherParams
     }
     | ExDateTime
-    { exDateTime :: DateTime
+    { exDateTime :: Set DateTime
     , exOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Recurrence Date-Times. 3.8.5.2.
 data RDate
     = RDateDate
     { rDateDate  :: Date
@@ -621,10 +692,10 @@ data Weekday = Sunday | Monday | Tuesday | Wednesday | Thursday
                       | Friday | Saturday
                deriving (Show, Eq, Ord, Bounded, Enum, Typeable)
 
--- | Recur value. 3.3.10
+-- | Recur value. 3.3.10.
 data Recur = Recur
     { recurFreq       :: Frequency
-    , recurUntilCount :: Either (Either Date DateTime) Int
+    , recurUntilCount :: Maybe (Either (Either Date DateTime) Int)
     , recurInterval   :: Int
     , recurBySecond   :: [Int]
     , recurByMinute   :: [Int]
@@ -652,12 +723,13 @@ data UntilCount
     , untilCountOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Recurrence Rule. 3.8.5.3
+-- | Recurrence Rule. 3.8.5.3.
 data RRule = RRule
     { rRuleValue :: Recur
     , rRuleOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Repeat count. 3.8.6.2.
 data Repeat = Repeat
     { repeatValue :: Integer
     , repeatOther :: OtherParams
@@ -666,39 +738,44 @@ data Repeat = Repeat
 instance Default Repeat where
     def = Repeat 0 def
 
-data DurRelated = Start | End
-                  deriving (Show, Eq, Ord, Typeable)
+-- | Alarm Trigger Relationship. 3.2.14.
+data AlarmTriggerRelationship = Start | End
+                                deriving (Show, Eq, Ord, Typeable)
 
-instance Default DurRelated where
+instance Default AlarmTriggerRelationship where
     def = Start
 
+-- | Trigger. 3.8.6.3.
 data Trigger
     = TriggerDuration
     { triggerDuration :: Duration
-    , triggerRelated  :: DurRelated
+    , triggerRelated  :: AlarmTriggerRelationship
     , triggerOther    :: OtherParams
     }
     | TriggerDateTime
-    { triggerDateTime :: DateTime
+    { triggerDateTime :: UTCTime
     , triggerOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Date-Time Created. 3.8.7.1.
 data Created = Created
     { createdValue :: DateTime
     , createdOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Date-Time Stamp. 3.8.7.2.
 data DTStamp = DTStamp
-    { dtStampValue :: DateTime
+    { dtStampValue :: UTCTime
     , dtStampOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
--- | Last Modified. 3.8.7.3
+-- | Last Modified. 3.8.7.3.
 data LastModified = LastModified
     { lastModifiedValue :: UTCTime
     , lastModifiedOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Sequence number. 3.8.7.4.
 data Sequence = Sequence
     { sequenceValue :: Integer
     , sequenceOther :: OtherParams
@@ -707,6 +784,7 @@ data Sequence = Sequence
 instance Default Sequence where
     def = Sequence 0 def
 
+-- | Request Status. 3.8.8.3.
 data RequestStatus = RequestStatus
     { requestStatusCode     :: [Int]
     , requestStatusDesc     :: Text
@@ -716,6 +794,7 @@ data RequestStatus = RequestStatus
     } deriving (Show, Eq, Ord, Typeable)
 
 data OtherProperty = OtherProperty
-    { otherValue  :: ByteString
+    { otherName   :: CI Text
+    , otherValue  :: ByteString
     , otherParams :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
