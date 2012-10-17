@@ -7,7 +7,7 @@
 module Text.ICalendar.Parser
     ( parseICal
     , parseICalFile
-    , EncodingFunctions(..)
+    , DecodingFunctions(..)
     ) where
 
 import Prelude hiding (mapM)
@@ -57,20 +57,20 @@ import Text.ICalendar.Types
 
 -- | This module use a specialized line-unfolding parser.
 -- See 'scan'.
-type TextParser = P.Parsec ByteString EncodingFunctions
+type TextParser = P.Parsec ByteString DecodingFunctions
 
 type ContentParser = ErrorT String -- Fatal errors.
-                            (RWS EncodingFunctions
+                            (RWS DecodingFunctions
                                  [String] -- Warnings.
                                  (P.SourcePos, [Content]))
 
-data EncodingFunctions = EncodingFunctions
-    { efBS2Text :: ByteString -> Text
-    , efBS2IText :: ByteString -> CI Text
+data DecodingFunctions = DecodingFunctions
+    { dfBS2Text :: ByteString -> Text
+    , dfBS2IText :: ByteString -> CI Text
     }
 
-instance Default EncodingFunctions where
-    def = EncodingFunctions TE.decodeUtf8 (CI.mk . TE.decodeUtf8)
+instance Default DecodingFunctions where
+    def = DecodingFunctions TE.decodeUtf8 (CI.mk . TE.decodeUtf8)
 
 data Content = ContentLine SourcePos (CI Text) [(CI Text, [Text])] ByteString
              | Component SourcePos (CI Text) [Content]
@@ -78,7 +78,7 @@ data Content = ContentLine SourcePos (CI Text) [(CI Text, [Text])] ByteString
 
 
 -- | Parse a ByteString containing iCalendar data.
-parseICal :: EncodingFunctions
+parseICal :: DecodingFunctions
           -> FilePath
           -> ByteString
           -> Either String (VCalendar, [String])
@@ -86,12 +86,14 @@ parseICal s f bs = do
     a <- either (Left . show) Right $ runParser parseToContent s f bs
     when (null a) $ throwError "Missing content."
     unless (null $ drop 1 a) $ throwError "Multiple top-level components."
-    let (g, w) = runCP s $ parseVCalendar (head a)
-    x <- g
+    let (g, (pos, _), w) = runCP s $ parseVCalendar (head a)
+    x <- case g of
+              Left e -> Left $ show pos ++ ": " ++ e
+              Right x -> Right x
     return (x, w)
 
 -- | Parse an iCalendar file.
-parseICalFile :: EncodingFunctions
+parseICalFile :: DecodingFunctions
               -> FilePath
               -> IO (Either String (VCalendar, [String]))
 parseICalFile s f = parseICal s f <$> B.readFile f
@@ -99,9 +101,12 @@ parseICalFile s f = parseICal s f <$> B.readFile f
 -- {{{ Parse into content.
 
 parseToContent :: TextParser [Content]
-parseToContent = do content <- sepEndBy1 contentline (char '\n')
-                    f <- efBS2IText <$> getState
+parseToContent = do content <- sepEndBy1 contentline newline
+                    f <- dfBS2IText <$> getState
                     return $ componentalize f content
+
+newline :: TextParser ()
+newline = (char '\r' >> void (optional $ char '\n')) <|> void (char '\n')
 
 
 componentalize :: (ByteString -> CI Text) -> [Content] -> [Content]
@@ -130,7 +135,7 @@ scan state f = go state mempty
             case (c, f st c) of
                  (_, Nothing) -> mzero
                  (Just c', Just (Just st')) ->
-                    anyToken *> go st' (buf <> Bu.char8 c')
+                    P.anyChar *> go st' (buf <> Bu.char8 c')
                  (_, _) -> return $ Bu.toLazyByteString buf
 
         unfold = (P.char '\r' >> optional (P.char '\n') >> P.oneOf " \t")
@@ -162,8 +167,7 @@ contentline = do pos <- getPosition
                  n <- name
                  ps <- many (char ';' >> param)
                  _ <- char ':'
-                 val <- value
-
+                 val <- value <|> return mempty
                  return $ ContentLine pos n ps val
   where value :: TextParser ByteString
         value = takeWhile1 isValue <?> "value"
@@ -175,28 +179,27 @@ contentline = do pos <- getPosition
                    return (n, vs)
 
         name :: TextParser (CI Text)
-        name = efBS2IText <$> getState <*> takeWhile1 isName <?> "name"
+        name = dfBS2IText <$> getState <*> takeWhile1 isName <?> "name"
 
         paramValue :: TextParser Text
         paramValue = paramtext <|> quotedString
 
         paramtext :: TextParser Text
-        paramtext = efBS2Text <$> getState <*> takeWhile1 isSafe <?> "paramtext"
+        paramtext = dfBS2Text <$> getState <*> takeWhile1 isSafe <?> "paramtext"
 
         quotedString :: TextParser Text
         quotedString = (do
             _ <- char '"'
-            s <- takeWhile1 isQSafe
+            s <- takeWhile1 isQSafe <|> return mempty
             _ <- char '"'
-            efBS2Text <$> getState <*> pure s) <?> "quoted string"
+            dfBS2Text <$> getState <*> pure s) <?> "quoted string"
 
 -- }}}
 -- {{{ Parse content lines into iCalendar components.
 
-runCP :: EncodingFunctions -> ContentParser a
-      -> (Either String a, [String])
-runCP s = (\(a, _, w) -> (a, w)) . ((flip .) . flip) runRWS s undefined
-                                 . runErrorT
+runCP :: DecodingFunctions -> ContentParser a
+      -> (Either String a, (SourcePos, [Content]), [String])
+runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runErrorT
 
 -- {{{ Component parsers
 
@@ -223,8 +226,8 @@ parseVEvent :: Content -> ContentParser VEvent
 parseVEvent (Component _ "VEVENT" _) = do
     veDTStamp <- reqLine1 "DTSTAMP" $ parseSimpleUTC DTStamp
     veUID <- reqLine1 "UID" $ parseSimple UID
-    veDTStart <- reqLine1 "DTSTART" $
-                    parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+    veDTStart <- optLine1 "DTSTART" $
+                  Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
     veClass <- optLine1 "CLASS" parseClass
     veCreated <- optLine1 "CREATED" $ parseSimpleDateTime ((Just .) . Created)
     veDescription <- optLine1 "DESCRIPTION" .
@@ -242,11 +245,11 @@ parseVEvent (Component _ "VEVENT" _) = do
     veTransp <- optLine1 "TRANSP" parseTransp
     veUrl <- optLine1 "URL" (Just .: parseSimpleURI URL)
     veRecurId <- optLine1 "RECURRENCE-ID"
-                    $ Just .: parseRecurId (Just veDTStart)
-    veRRule <- optLineN "RRULE" (parseRRule $ Just veDTStart)
+                    $ Just .: parseRecurId veDTStart
+    veRRule <- optLineN "RRULE" $ parseRRule $ veDTStart
     when (S.size veRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
     veDTEndDuration <- parseXDurationOpt "DTEND" DTEndDateTime DTEndDate
-                                         $ Just veDTStart
+                                         $ veDTStart
     veAttach <- optLineN "ATTACH" parseAttachment
     veAttendee <- optLineN "ATTENDEE" parseAttendee
     veCategories <- optLineN "CATEGORIES" parseCategories
@@ -281,7 +284,8 @@ parseVTodo (Component _ "VTODO" _) = do
     vtLocation <- optLine1 "LOCATION" .
                 parseAltRepLang $ (((Just .) .) .) . Location
     vtOrganizer <- optLine1 "ORGANIZER" (Just .: parseOrganizer)
-    vtPercent <- optLine1 "PERCENT-COMPLETE" $ Just .: parseSimpleRead Percent
+    vtPercent <- optLine1 "PERCENT-COMPLETE" $ Just .: parseSimpleRead
+                                                             PercentComplete
     vtPriority <- optLine1 "PRIORITY" $ parseSimpleRead Priority
     vtRecurId <- optLine1 "RECURRENCE-ID" (Just .: parseRecurId vtDTStart)
     vtSeq <- optLine1 "SEQUENCE" $ parseSimpleRead Sequence
@@ -381,11 +385,53 @@ parseVAlarm x = throwError $ "parseVAlarm: " ++ show x
 
 parseVJournal :: Content -> ContentParser VJournal
 parseVJournal (Component _ "VJOURNAL" _) = do
+    vjDTStamp <- reqLine1 "DTSTAMP" $ parseSimpleUTC DTStamp
+    vjUID <- reqLine1 "UID" $ parseSimple UID
+    vjClass <- optLine1 "CLASS" parseClass
+    vjCreated <- optLine1 "CREATED" . parseSimpleDateTime $
+                (Just .) . Created
+    vjDTStart <- optLine1 "DTSTART" $
+                Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+    vjDescription <- optLineN "DESCRIPTION" $ parseAltRepLang Description
+    vjLastMod <- optLine1 "LAST-MODIFIED" (Just .: parseLastModified)
+    vjOrganizer <- optLine1 "ORGANIZER" (Just .: parseOrganizer)
+    vjRecurId <- optLine1 "RECURRENCE-ID" (Just .: parseRecurId vjDTStart)
+    vjSeq <- optLine1 "SEQUENCE" $ parseSimpleRead Sequence
+    vjStatus <- optLine1 "STATUS" (Just .: parseJournalStatus)
+    vjSummary <- optLine1 "SUMMARY" .
+                parseAltRepLang $ (((Just .) .) .) . Summary
+    vjUrl <- optLine1 "URL" (Just .: parseSimpleURI URL)
+    vjRRule <- optLineN "RRULE" $ parseRRule vjDTStart
+    when (S.size vjRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
+    vjAttach <- optLineN "ATTACH" parseAttachment
+    vjAttendee <- optLineN "ATTENDEE" parseAttendee
+    vjCategories <- optLineN "CATEGORIES" parseCategories
+    vjComment <- optLineN "COMMENT" $ parseAltRepLang Comment
+    vjContact <- optLineN "CONTACT" $ parseAltRepLang Contact
+    vjExDate <- optLineN "EXDATE" parseExDate
+    vjRStatus <- optLineN "REQUEST-STATUS" parseRequestStatus
+    vjRelated <- optLineN "RELATED-TO" parseRelatedTo
+    vjRDate <- optLineN "RDATE" parseRDate
+    vjOther <- otherProperties
     return VJournal {..}
 parseVJournal x = throwError $ "parseVJournal: " ++ show x
 
 parseVFreeBusy :: Content -> ContentParser VFreeBusy
 parseVFreeBusy (Component _ "VFreeBusy" _) = do
+    vfbDTStamp <- reqLine1 "DTSTAMP" $ parseSimpleUTC DTStamp
+    vfbUID <- reqLine1 "UID" $ parseSimple UID
+    vfbContact <- optLine1 "CONTACT" $ Just .: parseAltRepLang Contact
+    vfbDTStart <- optLine1 "DTSTART" $
+                  Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+    vfbDTEnd <- optLine1 "DTEND" $ Just .: parseSimpleDateOrDateTime
+                                                DTEndDateTime DTEndDate
+    vfbOrganizer <- optLine1 "ORGANIZER" $ Just .: parseOrganizer
+    vfbAttendee <- optLineN "ATTENDEE" parseAttendee
+    vfbComment <- optLineN "COMMENT" $ parseAltRepLang Comment
+    vfbRStatus <- optLineN "REQUEST-STATUS" parseRequestStatus
+    vfbUrl <- optLine1 "URL" (Just .: parseSimpleURI URL)
+    vfbFreeBusy <- optLineN "FREEBUSY" parseFreeBusy
+    vfbOther <- otherProperties
     return VFreeBusy {..}
 parseVFreeBusy x = throwError $ "parseVFreeBusy: " ++ show x
 
@@ -393,13 +439,21 @@ otherComponents :: ContentParser (Set VOther)
 otherComponents = optN parseVOther . partition isComponent =<< snd <$> get
 
 parseVOther :: Content -> ContentParser VOther
-parseVOther (Component _ veName _) = do
-    veProps <- otherProperties
+parseVOther (Component _ voName _) = do
+    voProps <- otherProperties
     return VOther {..}
 parseVOther x = throwError $ "parseVOther: "++ show x
 
 -- }}}
 -- {{{ Property parsers
+
+parseFreeBusy :: Content -> ContentParser FreeBusy
+parseFreeBusy (ContentLine _ "FREEBUSY" o bs) = do
+    typ <- maybe (return def) (parseFBType . CI.mk .: paramOnlyOne) $
+                     lookup "FBTYPE" o
+    periods <- S.fromList .: mapM parsePeriod $ B.split ',' bs
+    return $ FreeBusy typ periods (toO $ filter ((/="FBTYPE").fst) o)
+parseFreeBusy x = throwError $ "parseFreeBusy: " ++ show x
 
 parseXDurationOpt :: CI Text
                   -> (DateTime -> OtherParams -> a)
@@ -463,7 +517,7 @@ parseRequestStatus (ContentLine _ "REQUEST-STATUS" o bs) = do
                               throwError $ "parseRequestStatus: bad desc: " ++
                                                show bs
                           Just <$> (valueOnlyOne =<< parseText (B.tail rest'))
-    lang <- mapM paramOnlyOne $ CI.mk .: lookup "LANGUAGE" o
+    lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
     let o' = filter (\(x, _) -> x `notElem` ["LANGUAGE"]) o
     return $ RequestStatus (fromJust statcode) statdesc lang statext (toO o')
 parseRequestStatus x = throwError $ "parseRequestStatus: " ++ show x
@@ -489,7 +543,7 @@ parseExDate x = throwError $ "parseExDate: " ++ show x
 parseCategories :: Content -> ContentParser Categories
 parseCategories (ContentLine _ "CATEGORIES" o bs) = do
     vals <- parseText bs
-    lang <- mapM paramOnlyOne $ CI.mk .: lookup "LANGUAGE" o
+    lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
     let o' = filter (\(x, _) -> x `notElem` ["LANGUAGE"]) o
     return $ Categories (S.fromList vals) lang (toO o')
 parseCategories x = throwError $ "parseCategories: " ++ show x
@@ -497,7 +551,7 @@ parseCategories x = throwError $ "parseCategories: " ++ show x
 -- | Parse attendee. 3.8.4.1
 parseAttendee :: Content -> ContentParser Attendee
 parseAttendee (ContentLine _ "ATTENDEE" o bs) = do
-    attendeeValue <- parseURI =<< asks (T.unpack . ($ bs) . efBS2Text)
+    attendeeValue <- parseURI =<< asks (T.unpack . ($ bs) . dfBS2Text)
     attendeeCUType <- g (parseCUType . CI.mk .: paramOnlyOne) $
                         lookup "CUTYPE" o
     attendeeMember <- g (S.fromList .: mapM (parseURI . T.unpack)) $
@@ -516,7 +570,8 @@ parseAttendee (ContentLine _ "ATTENDEE" o bs) = do
     attendeeCN <- mapM paramOnlyOne $ lookup "CN" o
     attendeeDir <- mapM (parseURI . T.unpack <=< paramOnlyOne) $
                         lookup "DIR" o
-    attendeeLanguage <- mapM (CI.mk .: paramOnlyOne) $ lookup "LANGUAGE" o
+    attendeeLanguage <- mapM (Language . CI.mk .: paramOnlyOne) $
+                        lookup "LANGUAGE" o
     let attendeeOther = toO $ filter f o
         f (x, _) = x `notElem` [ "CUTYPE", "MEMBER", "ROLE", "PARTSTAT", "RSVP"
                                , "DELEGATED-TO", "DELEGATED-FROM", "SENT-BY"
@@ -543,7 +598,7 @@ parseAttachment (ContentLine _ "ATTACH" o bs) = do
                                                   (toO $ filter binF o)
                   _ -> throwError $ "parseAttachment: invalid encoding: " ++
                                         show enc
-         Nothing -> do uri <- parseURI =<< asks (T.unpack . ($ bs) . efBS2Text)
+         Nothing -> do uri <- parseURI =<< asks (T.unpack . ($ bs) . dfBS2Text)
                        return $ UriAttachment fmt uri (toO $ filter f o)
          _ -> throwError $ "parseAttachment: invalid value: " ++ show val
   where binF a@(x, _) = f a && x /= "VALUE" && x /= "ENCODING"
@@ -565,11 +620,13 @@ parseDurationProp dts (ContentLine _ "DURATION" o bs) = do
 parseDurationProp _ x = throwError $ "parseDurationProp: " ++ show x
 
 parseRecurId :: Maybe DTStart -> Content -> ContentParser RecurrenceId
-parseRecurId dts c@(ContentLine _ "RECURRENCE-ID" _ _) = do
+parseRecurId dts (ContentLine p "RECURRENCE-ID" o bs) = do
+    range' <- maybe (return def) (parseRange . CI.mk <=< paramOnlyOne) $
+                                   lookup "RANGE" o
     recurid <- parseSimpleDateOrDateTime
-            (($ def) . RecurrenceIdDateTime)
-            (($ def) . RecurrenceIdDate)
-            c
+            (($ range') . RecurrenceIdDateTime)
+            (($ range') . RecurrenceIdDate)
+            (ContentLine p "RECURRENCE-ID" (filter ((/="RANGE").fst) o) bs)
     case (dts, recurid) of
          (Nothing, _) -> return recurid
          (Just DTStartDate {}, RecurrenceIdDate {}) ->
@@ -595,7 +652,7 @@ parseTransp (ContentLine _ "TRANSP" o x)
 parseTransp x = throwError $ "parseTransp: " ++ show x
 
 -- | Parse event status. 3.8.1.11
-parseEventStatus :: Content -> ContentParser StatusEvent
+parseEventStatus :: Content -> ContentParser EventStatus
 parseEventStatus (ContentLine _ "STATUS" o x)
     | CI.mk x == "TENTATIVE" = return . TentativeEvent $ toO o
     | CI.mk x == "CONFIRMED" = return . ConfirmedEvent $ toO o
@@ -603,7 +660,7 @@ parseEventStatus (ContentLine _ "STATUS" o x)
 parseEventStatus x = throwError $ "parseEventStatus: " ++ show x
 
 -- | Parse todo status. 3.8.1.11
-parseTodoStatus :: Content -> ContentParser StatusTodo
+parseTodoStatus :: Content -> ContentParser TodoStatus
 parseTodoStatus (ContentLine _ "STATUS" o x)
     | CI.mk x == "NEEDS-ACTION" = return . TodoNeedsAction $ toO o
     | CI.mk x == "COMPLETED"    = return . CompletedTodo   $ toO o
@@ -611,15 +668,24 @@ parseTodoStatus (ContentLine _ "STATUS" o x)
     | CI.mk x == "CANCELLED"    = return . CancelledTodo   $ toO o
 parseTodoStatus x = throwError $ "parseTodoStatus: " ++ show x
 
+-- | Parse journal status. 3.8.1.11
+parseJournalStatus :: Content -> ContentParser JournalStatus
+parseJournalStatus (ContentLine _ "STATUS" o x)
+    | CI.mk x == "DRAFT"     = return . DraftJournal     $ toO o
+    | CI.mk x == "FINAL"     = return . FinalJournal     $ toO o
+    | CI.mk x == "CANCELLED" = return . CancelledJournal $ toO o
+parseJournalStatus x = throwError $ "parseJournalStatus: " ++ show x
+
 -- | Parse organizer. 3.8.4.3
 parseOrganizer :: Content -> ContentParser Organizer
 parseOrganizer (ContentLine _ "ORGANIZER" o bs) = do
-    organizerValue <- parseURI =<< asks (T.unpack . ($ bs) . efBS2Text)
+    organizerValue <- parseURI =<< asks (T.unpack . ($ bs) . dfBS2Text)
     organizerCN <- mapM paramOnlyOne $ lookup "CN" o
     organizerDir <- mapM (parseURI . T.unpack <=< paramOnlyOne) $ lookup "DIR" o
     organizerSentBy <- mapM (parseURI . T.unpack <=< paramOnlyOne) $
         lookup "SENT-BY" o
-    organizerLanguage <- mapM (CI.mk .: paramOnlyOne) $ lookup "LANGUAGE" o
+    organizerLanguage <- mapM (Language . CI.mk .: paramOnlyOne) $
+        lookup "LANGUAGE" o
     let f x = x `notElem` ["CN", "DIR", "SENT-BY", "LANGUAGE"]
         o' = filter (f . fst) o
     return Organizer { organizerOther = toO o', .. }
@@ -639,7 +705,7 @@ parseGeo x = throwError $ "parseGeo: " ++ show x
 -- | Parse classification. 3.8.1.3
 parseClass :: Content -> ContentParser Class
 parseClass (ContentLine _ "CLASS" o bs) = do
-    iconv <- asks efBS2IText
+    iconv <- asks dfBS2IText
     return . flip Class (toO o) $
         case iconv bs of
              "PUBLIC" -> Public
@@ -652,7 +718,7 @@ parseClass x = throwError $ "parseClass: " ++ show x
 parseTZName :: Content -> ContentParser TZName
 parseTZName (ContentLine _ "TZNAME" o bs) = do
     txt <- valueOnlyOne =<< parseText bs
-    lang <- mapM paramOnlyOne $ CI.mk .: lookup "LANGUAGE" o
+    lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
     return $ TZName txt lang (toO o)
 parseTZName x = throwError $ "parseTZName: " ++ show x
 
@@ -660,7 +726,7 @@ parseTZName x = throwError $ "parseTZName: " ++ show x
 -- | Parse a VERSION property 3.7.4
 parseVersion :: Content -> ContentParser ICalVersion
 parseVersion (ContentLine _ "VERSION" o bs) = do
-    c <- asks efBS2Text
+    c <- asks dfBS2Text
     let (maxver', minver'') = break (==';') . T.unpack $ c bs
         minver' = drop 1 minver''
         parseVer = fst .: listToMaybe . filter ((=="") . snd)
@@ -681,7 +747,7 @@ parseVersion x = throwError $ "parseVersion: " ++ show x
 -- | Parse a TZID property. 3.8.3.1
 parseTZID :: Content -> ContentParser TZID
 parseTZID (ContentLine _ "TZID" o bs) = do
-    tzidValue <- asks $ ($ bs) . efBS2Text
+    tzidValue <- asks $ ($ bs) . dfBS2Text
     let tzidGlobal = (fst <$> T.uncons tzidValue) == Just '/'
         tzidOther = toO o
     return TZID {..}
@@ -710,9 +776,10 @@ parseRDate :: Content -> ContentParser RDate
 parseRDate c@(ContentLine _ "RDATE" o bs) = do
     typ <- paramOnlyOne . fromMaybe ["DATE-TIME"] $ lookup "VALUE" o
     case typ of
-         "PERIOD" -> do p <- parsePeriod bs
-                        return $ RDatePeriod p (toO o)
-         _ -> parseSimpleDateOrDateTime RDateDateTime RDateDate c
+         "PERIOD" -> do
+             p <- S.fromList .: mapM parsePeriod $ B.split ',' bs
+             return $ RDatePeriods p (toO $ filter ((/="VALUE") . fst) o)
+         _ -> parseSimpleDatesOrDateTimes RDateDateTimes RDateDates c
 parseRDate x = throwError $ "parseRDate: " ++ show x
 
 -- | Parse a UTC Offset property 3.3.14, 3.8.3.4, and 3.8.3.3
@@ -754,6 +821,21 @@ parseBool :: CI Text -> ContentParser Bool
 parseBool "TRUE" = return True
 parseBool "FALSE" = return False
 parseBool x = throwError $ "parseBool: " ++ show x
+
+-- | Parse recurrence identifier range. 3.2.13
+parseRange :: CI Text -> ContentParser Range
+parseRange "THISANDFUTURE" = return ThisAndFuture
+parseRange "THISANDPRIOR"  = do tell ["THISANDPRIOIR RANGE is deprecated."]
+                                return ThisAndPrior
+parseRange x = throwError $ "parseRange: " ++ show x
+
+-- | Parse free/busy time type. 3.2.9.
+parseFBType :: CI Text -> FBType
+parseFBType "FREE"             = Free
+parseFBType "BUSY"             = Busy
+parseFBType "BUSY-UNAVAILABLE" = BusyUnavailable
+parseFBType "BUSY-TENTATIVE"   = BusyTentative
+parseFBType x                  = FBTypeX x
 
 -- | Parse participation status. 3.2.12
 parsePartStat :: CI Text -> PartStat
@@ -811,6 +893,7 @@ parseDuration what bs =
                     s <- optional . try $ digits <* P.char 'S'
                     return (h, m, s)
                  week <- optional . try $ digits <* P.char 'W'
+                 P.eof
                  case (day, time, week) of
                       (Just d, x, Nothing) ->
                            let (h, m, s) = deMHms x
@@ -888,7 +971,7 @@ parseRecur dts =
 
 -- | Parse text. 3.3.11
 parseText' :: ByteString -> ContentParser ([Text], ByteString)
-parseText' bs = do c <- asks efBS2Text
+parseText' bs = do c <- asks dfBS2Text
                    case runParser ((,) <$> texts <*> getInput) () "text" bs of
                         Left e -> throwError $ "parseText': " ++ show e
                         Right (x, r) -> return ( map (c . Bu.toLazyByteString) x
@@ -925,13 +1008,18 @@ parseDateStr = lastToMaybe . Time.readsTime L.defaultTimeLocale "%Y%m%d"
 
 -- | Parse a string to a TimeOfDay, and a bool if it's in UTC.
 parseTimeStr :: String -> Maybe (TimeOfDay, Bool)
-parseTimeStr s = second (=="Z")
-           <$> lastToMaybe (Time.readsTime L.defaultTimeLocale "%H%M%S" s)
+parseTimeStr s = do
+    (t, r) <- lastToMaybe (Time.readsTime L.defaultTimeLocale "%H%M%S" s)
+    case r of
+         "Z" -> return (t, True)
+         "" -> return (t, False)
+         _ -> fail ""
+
 
 -- | Parse a Date value. 3.3.4
 parseDate :: ByteString -> ContentParser Date
 parseDate bs = do
-    str <- asks $ T.unpack . ($ bs) . efBS2Text
+    str <- asks $ T.unpack . ($ bs) . dfBS2Text
     let dayRes = parseDateStr str
         Just (day, rest) = dayRes
     when (isNothing dayRes) .
@@ -944,7 +1032,7 @@ parseDate bs = do
 parseDateTime :: Maybe Text -- ^ Time Zone ID
               -> ByteString -> ContentParser DateTime
 parseDateTime mTZ bs = do
-    str <- asks $ T.unpack . ($ bs) . efBS2Text
+    str <- asks $ T.unpack . ($ bs) . dfBS2Text
     let dayRes = parseDateStr str
         Just (day, rest') = dayRes
         t = take 1 rest'
@@ -989,7 +1077,7 @@ parseSimple _ x = throwError $ "parseSimple: " ++ show x
 -- | Parse something simple with only a CI Text-field for the content, and
 -- 'OtherParams'.
 parseSimpleI :: (CI Text -> OtherParams -> b) -> Content -> ContentParser b
-parseSimpleI k (ContentLine _ _ o bs) = do c <- asks efBS2IText
+parseSimpleI k (ContentLine _ _ o bs) = do c <- asks dfBS2IText
                                            return $ k (c bs) (toO o)
 parseSimpleI _ x = throwError $ "parseSimpleI: " ++ show x
 
@@ -1011,7 +1099,7 @@ parseAltRepLang' :: ([Text] -> ContentParser b)
 parseAltRepLang' m f (ContentLine _ _ o bs) = do
     t <- m =<< parseText bs
     uri <- mapM (parseURI <=< paramOnlyOne) $ T.unpack .: lookup "ALTREP" o
-    lang <- mapM paramOnlyOne $ CI.mk .: lookup "LANGUAGE" o
+    lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
     let o' = filter (\(x, _) -> x `notElem` ["ALTREP", "LANGUAGE"]) o
     return $ f t uri lang (toO o')
 parseAltRepLang' _ _ x = throwError $ "parseAltRepLang': " ++ show x
@@ -1033,7 +1121,7 @@ parseAltRepLangN = parseAltRepLang' (return . S.fromList)
 -- 'OtherParams'.
 parseSimpleURI :: (URI.URI -> OtherParams -> a) -> Content -> ContentParser a
 parseSimpleURI f (ContentLine _ _ o bs) = do
-    uri <- parseURI =<< asks (T.unpack . ($ bs) . efBS2Text)
+    uri <- parseURI =<< asks (T.unpack . ($ bs) . dfBS2Text)
     return . f uri $ toO o
 parseSimpleURI _ x = throwError $ "parseSimpleURI: " ++ show x
 
@@ -1057,6 +1145,28 @@ parseSimpleDateOrDateTime dt d (ContentLine _ _ o bs) = do
          _ -> throwError $ "Invalid type: " ++ show typ
 parseSimpleDateOrDateTime _ _ x =
     throwError $ "parseSimpleDateOrDateTime: " ++ show x
+
+-- | Parse something which has a set of either a 'Date' or a 'DateTime' value,
+-- and 'OtherParams'. Uses DateTime if there is no value parameter.
+parseSimpleDatesOrDateTimes :: (Set DateTime -> OtherParams -> a)
+                            -> (Set Date     -> OtherParams -> a)
+                            -> Content
+                            -> ContentParser a
+parseSimpleDatesOrDateTimes dt d (ContentLine _ _ o bs) = do
+    typ <- paramOnlyOne . fromMaybe ["DATE-TIME"] $ lookup "VALUE" o
+    tzid <- mapM paramOnlyOne $ lookup "TZID" o
+    let f x = x /= "VALUE" && if typ == "DATE-TIME" then x /= "TZID"
+                                                    else True
+        o' = filter (f . fst) o
+    case typ of
+         "DATE-TIME" -> do x <- S.fromList .: mapM (parseDateTime tzid) $
+                                                B.split ',' bs
+                           return . dt x $ toO o'
+         "DATE" -> do x <- S.fromList .: mapM parseDate $ B.split ',' bs
+                      return . d x $ toO o'
+         _ -> throwError $ "Invalid type: " ++ show typ
+parseSimpleDatesOrDateTimes _ _ x =
+    throwError $ "parseSimpleDatesOrDateTimes: " ++ show x
 
 -- | Parse something which has only a DateTime value, and 'OtherParams'.
 parseSimpleDateTime :: (DateTime -> OtherParams -> a)

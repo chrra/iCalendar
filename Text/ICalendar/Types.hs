@@ -16,7 +16,8 @@ import Data.Typeable (Typeable)
 import Data.Version (Version(..))
 import Network.URI (URI)
 
-type Language = CI Text -- TODO: RFC5646 types and parser.
+newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
+                   deriving (Eq, Show, Ord, Typeable)
 
 type CalAddress = URI
 
@@ -88,8 +89,8 @@ data Method = Method
 data VEvent = VEvent
     { veDTStamp       :: DTStamp
     , veUID           :: UID
-    , veDTStart       :: DTStart
     , veClass         :: Class
+    , veDTStart       :: Maybe DTStart
     , veCreated       :: Maybe Created
     , veDescription   :: Maybe Description
     , veGeo           :: Maybe Geo
@@ -98,7 +99,7 @@ data VEvent = VEvent
     , veOrganizer     :: Maybe Organizer
     , vePriority      :: Priority -- def = 0
     , veSeq           :: Sequence -- def = 0
-    , veStatus        :: Maybe StatusEvent
+    , veStatus        :: Maybe EventStatus
     , veSummary       :: Maybe Summary
     , veTransp        :: TimeTransparency -- def = Opaque
     , veUrl           :: Maybe URL
@@ -131,11 +132,11 @@ data VTodo = VTodo
     , vtLastMod       :: Maybe LastModified
     , vtLocation      :: Maybe Location
     , vtOrganizer     :: Maybe Organizer
-    , vtPercent       :: Maybe Percent
+    , vtPercent       :: Maybe PercentComplete
     , vtPriority      :: Priority
     , vtRecurId       :: Maybe RecurrenceId
     , vtSeq           :: Sequence
-    , vtStatus        :: Maybe StatusTodo
+    , vtStatus        :: Maybe TodoStatus
     , vtSummary       :: Maybe Summary
     , vtUrl           :: Maybe URL
     , vtRRule         :: Set RRule
@@ -164,7 +165,7 @@ data VJournal = VJournal
     , vjOrganizer     :: Maybe Organizer
     , vjRecurId       :: Maybe RecurrenceId
     , vjSeq           :: Sequence
-    , vjStatus        :: Maybe StatusJournal
+    , vjStatus        :: Maybe JournalStatus
     , vjSummary       :: Maybe Summary
     , vjUrl           :: Maybe URL
     , vjRRule         :: Set RRule
@@ -255,8 +256,8 @@ data VAlarm
     } deriving (Show, Eq, Ord, Typeable)
 
 data VOther = VOther
-    { veName :: CI Text
-    , veProps :: Set OtherProperty
+    { voName :: CI Text
+    , voProps :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Attachment. 3.8.1.1.
@@ -338,9 +339,9 @@ data Location = Location
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Percent complete. 3.8.1.8.
-data Percent = Percent
-    { percentValue :: Int
-    , percentOther :: OtherParams
+data PercentComplete = PercentComplete
+    { percentCompleteValue :: Int
+    , percentCompleteOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Priority. 3.8.1.9.
@@ -361,24 +362,24 @@ data Resources = Resources
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Status, but only for Events. 3.8.1.11.
-data StatusEvent
-    = TentativeEvent OtherParams
-    | ConfirmedEvent OtherParams
-    | CancelledEvent OtherParams
+data EventStatus
+    = TentativeEvent { eventStatusOther :: OtherParams }
+    | ConfirmedEvent { eventStatusOther :: OtherParams }
+    | CancelledEvent { eventStatusOther :: OtherParams }
       deriving (Show, Eq, Ord, Typeable)
 
 -- | Status, but only for TODOs. 3.8.1.11.
-data StatusTodo
-    = TodoNeedsAction OtherParams
-    | CompletedTodo OtherParams
-    | InProcessTodo OtherParams
-    | CancelledTodo OtherParams
+data TodoStatus
+    = TodoNeedsAction { todoStatusOther :: OtherParams }
+    | CompletedTodo   { todoStatusOther :: OtherParams }
+    | InProcessTodo   { todoStatusOther :: OtherParams }
+    | CancelledTodo   { todoStatusOther :: OtherParams }
       deriving (Show, Eq, Ord, Typeable)
 
-data StatusJournal
-    = Draft OtherParams
-    | Final OtherParams
-    | CancelledJournal OtherParams
+data JournalStatus
+    = DraftJournal     { journalStatusOther :: OtherParams }
+    | FinalJournal     { journalStatusOther :: OtherParams }
+    | CancelledJournal { journalStatusOther :: OtherParams }
       deriving (Show, Eq, Ord, Typeable)
 
 -- | Summary. 3.8.1.12.
@@ -406,6 +407,7 @@ data DateTime
     , dateTimeZone     :: Text
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Date-Time End. 3.8.2.2.
 data DTEnd
     = DTEndDateTime
     { dtEndDateTimeValue :: DateTime
@@ -416,6 +418,7 @@ data DTEnd
     , dtEndOther         :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+-- | Date-Time Due. 3.8.2.3.
 data Due
     = DueDateTime
     { dueDateTimeValue :: DateTime
@@ -470,8 +473,9 @@ data DurationProp = DurationProp
     } deriving (Show, Eq, Ord, Typeable)
 
 data FreeBusy = FreeBusy
-    { freeBusyType   :: FBType
-    , freeBusyPeriod :: Period
+    { freeBusyType    :: FBType
+    , freeBusyPeriods :: Set Period
+    , freeBusyOther   :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Period of time. 3.3.9.
@@ -495,8 +499,8 @@ instance Default FBType where
 
 -- | Time Transparency. 3.8.2.7.
 data TimeTransparency
-    = Opaque      { transpOther :: OtherParams }
-    | Transparent { transpOther :: OtherParams }
+    = Opaque      { timeTransparencyOther :: OtherParams }
+    | Transparent { timeTransparencyOther :: OtherParams }
       deriving (Show, Eq, Ord, Typeable)
 
 instance Default TimeTransparency where
@@ -609,12 +613,12 @@ data Organizer = Organizer
 data RecurrenceId
     = RecurrenceIdDate
     { recurrenceIdDate  :: Date
-    , recurrenceRange   :: Range
+    , recurrenceIdRange :: Range
     , recurrenceIdOther :: OtherParams
     }
     | RecurrenceIdDateTime
     { recurrenceIdDateTime :: DateTime
-    , recurrenceRange      :: Range
+    , recurrenceIdRange    :: Range
     , recurrenceIdOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
@@ -665,17 +669,17 @@ data ExDate
 
 -- | Recurrence Date-Times. 3.8.5.2.
 data RDate
-    = RDateDate
-    { rDateDate  :: Date
+    = RDateDates
+    { rDateDates :: Set Date
     , rDateOther :: OtherParams
     }
-    | RDateDateTime
-    { rDateDateTime :: DateTime
-    , rDateOther    :: OtherParams
+    | RDateDateTimes
+    { rDateDateTimes :: Set DateTime
+    , rDateOther     :: OtherParams
     }
-    | RDatePeriod
-    { rDatePeriod :: Period
-    , rDateOther  :: OtherParams
+    | RDatePeriods
+    { rDatePeriods :: Set Period
+    , rDateOther   :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 data Frequency
