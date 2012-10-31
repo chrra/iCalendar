@@ -17,7 +17,6 @@ import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.ByteString.Lazy.Builder (Builder)
 import qualified Data.ByteString.Lazy.Builder as Bu
--- import Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI
 import Data.Char (ord, toUpper)
 import Data.Default
@@ -27,7 +26,6 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
--- import qualified Data.Text.Lazy.Encoding as TE
 import Data.Time (FormatTime())
 import qualified Data.Time as Time
 import qualified Data.Version as Ver
@@ -45,7 +43,6 @@ import Text.ICalendar.Types
 data EncodingFunctions = EncodingFunctions
     { efChar2Bu  :: Char -> Builder
     , efChar2Len :: Char -> Int -- ^ How many octets the character is encoded.
-    -- , efText2Bu  :: Text -> Builder
     }
 
 utf8Len :: Char -> Int
@@ -69,13 +66,10 @@ newtype SentBy = SentBy CalAddress
 data Quoting = NeedQuotes | Optional | NoQuotes
                deriving (Eq, Ord, Show)
 
-data Type = Text
-            deriving (Eq, Ord, Show)
-
+-- | UTF8.
 instance Default EncodingFunctions where
     def = EncodingFunctions Bu.charUtf8
                             utf8Len
-                --            (Bu.lazyByteString . TE.encodeUtf8)
 
 type ContentPrinter = RWS EncodingFunctions Builder Int
 

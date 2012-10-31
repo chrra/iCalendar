@@ -16,7 +16,7 @@ import Text.Parsec.Combinator hiding (optional)
 import Text.Parsec.ByteString.Lazy ()
 import Text.Parsec.Text.Lazy ()
 
-import Text.ICalendar.Common
+import Text.ICalendar.Parser.Common
 
 parseToContent :: TextParser [Content]
 parseToContent = do content <- sepEndBy1 contentline newline

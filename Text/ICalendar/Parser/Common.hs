@@ -6,7 +6,7 @@ import Prelude hiding (mapM)
 import Control.Applicative
 import Control.Arrow (second)
 import Control.Monad.Error hiding (mapM)
-import Control.Monad.RWS ( MonadWriter(tell) , MonadState(get, put), asks
+import Control.Monad.RWS ( RWS, MonadWriter(tell) , MonadState(get, put), asks
                          , modify )
 import Data.ByteString.Lazy.Char8 (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -22,6 +22,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as T
+import qualified Data.Text.Lazy.Encoding as TE
 import Data.Time ( UTCTime(UTCTime), LocalTime(LocalTime), Day
                  , TimeOfDay())
 import qualified Data.Time as Time
@@ -34,7 +35,27 @@ import Text.Parsec.Prim hiding ((<|>))
 import Text.Parsec.Combinator hiding (optional)
 
 import Text.ICalendar.Types
-import Text.ICalendar.Common
+
+data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
+             | Component P.SourcePos (CI Text) [Content]
+               deriving (Show, Eq, Ord)
+
+type TextParser = P.Parsec ByteString DecodingFunctions
+
+type ContentParser = ErrorT String -- Fatal errors.
+                            (RWS DecodingFunctions
+                                 [String] -- Warnings.
+                                 (P.SourcePos, [Content]))
+
+-- | Functions for decoding 'ByteString's into 'Text'.
+data DecodingFunctions = DecodingFunctions
+    { dfBS2Text :: ByteString -> Text
+    , dfBS2IText :: ByteString -> CI Text
+    }
+
+-- | UTF8.
+instance Default DecodingFunctions where
+    def = DecodingFunctions TE.decodeUtf8 (CI.mk . TE.decodeUtf8)
 
 -- | Parse text. 3.3.11
 parseText' :: ByteString -> ContentParser ([Text], ByteString)

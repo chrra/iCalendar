@@ -22,7 +22,7 @@ import Text.Parsec.ByteString.Lazy ()
 import Text.Parsec.Text.Lazy ()
 
 import Text.ICalendar.Types
-import Text.ICalendar.Common
+import Text.ICalendar.Parser.Common
 import Text.ICalendar.Parser.Content
 import Text.ICalendar.Parser.Components
 

@@ -21,7 +21,6 @@ import Text.Parsec.Perm
 import Text.Parsec.Combinator hiding (optional)
 
 import Text.ICalendar.Types
-import Text.ICalendar.Common
 import Text.ICalendar.Parser.Common
 
 parseAlarmTriggerRelationship :: CI Text

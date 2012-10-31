@@ -12,7 +12,6 @@ import Data.Set (Set)
 import qualified Data.Set as S
 
 import Text.ICalendar.Types
-import Text.ICalendar.Common
 import Text.ICalendar.Parser.Common
 import Text.ICalendar.Parser.Properties
 

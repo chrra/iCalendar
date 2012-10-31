@@ -1,23 +1,31 @@
 name:                iCalendar
-version:             1.0
+version:             0.1
 synopsis:            iCalendar data types, parser, and printer.
+description:         Data definitions, parsing and printing of the iCalendar
+                     format (RFC5545).
 homepage:            http://github.com/tingtun/iCalendar
+bug-reports:         http://github.com/tingtun/iCalendar/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Christian Rødli Amble
 maintainer:          cra+code@cra.no
 copyright:           (c) Tingtun
-category:            Text, Data
+stability:           experimental
+category:            Text
 build-type:          Simple
+tested-with:         GHC==7.6.1
 cabal-version:       >=1.8
+
+source-repository head
+  type:              git
+  location:          git://github.com/tingtun/iCalendar.git
 
 library
   exposed-modules:     Text.ICalendar.Types
                      , Text.ICalendar.Parser
                      , Text.ICalendar.Printer
                      , Text.ICalendar
-  other-modules:       Text.ICalendar.Common
-                     , Text.ICalendar.Parser.Common
+  other-modules:       Text.ICalendar.Parser.Common
                      , Text.ICalendar.Parser.Components
                      , Text.ICalendar.Parser.Content
                      , Text.ICalendar.Parser.Parameters

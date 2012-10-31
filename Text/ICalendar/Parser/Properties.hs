@@ -24,7 +24,6 @@ import Text.ParserCombinators.ReadP (readP_to_S)
 import Text.Parsec.Prim hiding ((<|>))
 
 import Text.ICalendar.Types
-import Text.ICalendar.Common
 import Text.ICalendar.Parser.Common
 import Text.ICalendar.Parser.Parameters
 
