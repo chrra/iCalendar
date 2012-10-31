@@ -117,6 +117,7 @@ printVTimeZone VTimeZone {..} = do
         ln . printShow $ tzUrlValue url
     mapM_ (printTZProp "STANDARD") vtzStandardC
     mapM_ (printTZProp "DAYLIGHT") vtzDaylightC
+    mapM_ printProperty vtzOther
     line "END:VTIMEZONE"
 
 printTZProp :: ByteString -> TZProp -> ContentPrinter ()
@@ -275,11 +276,13 @@ printVAlarm va = do
          VAlarmDisplay {..} -> do
              ln $ bytestring "DISPLAY"
              printProperty vaTrigger
+             printProperty vaDescription
              repAndDur
              printProperty vaOther
          VAlarmEmail {..} -> do
              ln $ bytestring "EMAIL"
              printProperty vaTrigger
+             printProperty vaDescription
              printProperty vaSummary
              printProperty vaAttendee
              repAndDur
@@ -287,6 +290,7 @@ printVAlarm va = do
              printProperty vaOther
          VAlarmX {..} -> do
              ln . out $ CI.original vaAction
+             printProperty vaTrigger
              printProperty vaOther
     line "END:VALARM"
   where repAndDur = unless (vaRepeat va == def) $ do
@@ -301,7 +305,7 @@ class IsProperty a where
     printProperty :: a -> ContentPrinter ()
 
 instance IsProperty a => IsProperty (Set a) where
-    printProperty s = mapM_ printProperty s
+    printProperty = mapM_ printProperty
 
 instance IsProperty a => IsProperty (Maybe a) where
     printProperty (Just x) = printProperty x
@@ -330,14 +334,14 @@ instance IsProperty DurationProp where
                                               printValue durationValue
 
 instance IsProperty Repeat where
-    printProperty Repeat {..} = ln $ do prop "REPEAT" $ repeatOther
+    printProperty Repeat {..} = ln $ do prop "REPEAT" repeatOther
                                         printShow repeatValue
 
 instance IsProperty DTEnd where
     printProperty dtend = ln $ prop "DTEND" dtend >> printValue dtend
 
 instance IsProperty Due where
-    printProperty due = ln $ prop "DTEND" due >> printValue due
+    printProperty due = ln $ prop "DUE" due >> printValue due
 
 instance IsProperty DTStamp where
     printProperty x = ln $ prop "DTSTAMP" x >> printValue x
@@ -349,8 +353,9 @@ instance IsProperty DTStart where
     printProperty x = ln $ prop "DTSTART" x >> printValue x
 
 instance IsProperty Class where
-    printProperty Class {..} = ln $ do prop "CLASS" classOther
-                                       printValue classValue
+    printProperty c@Class {..} | c == def = return ()
+                               | otherwise = ln $ do prop "CLASS" classOther
+                                                     printValue classValue
 
 instance IsProperty Created where
     printProperty Created {..} = ln $ do 
@@ -425,7 +430,7 @@ instance IsProperty URL where
     printProperty URL {..} = ln $ prop "URL" urlOther >> printShow urlValue
 
 instance IsProperty RecurrenceId where
-    printProperty r = ln $ do prop "RECURRENCE-ID" r >> printValue r
+    printProperty r = ln $ prop "RECURRENCE-ID" r >> printValue r
 
 instance IsProperty RRule where
     printProperty RRule {..} = ln $ do prop "RRULE" rRuleOther
@@ -461,10 +466,10 @@ instance IsProperty Contact where
 
 instance IsProperty ExDate where
     printProperty exd = ln $ do
-        prop "EXDATE" $ exOther exd
+        prop "EXDATE" exd
         case exd of
-             ExDate {..} -> printN printValue $ S.toList exDate
-             ExDateTime {..} -> printN printValue $ S.toList exDateTime
+             ExDates {..} -> printN printValue $ S.toList exDates
+             ExDateTimes {..} -> printN printValue $ S.toList exDateTimes
 
 instance IsProperty RequestStatus where
     printProperty RequestStatus {..} = ln $ do
@@ -534,6 +539,12 @@ instance ToParam a => ToParam (Set a) where
                      Nothing -> []
                      Just (x, _) -> toParam x
 
+instance ToParam ExDate where
+    toParam ExDates {..} = [("VALUE", [(NoQuotes, "DATE")])] <>
+                           toParam exDateOther
+    toParam ExDateTimes {..} = toParam exDateOther <>
+                               toParam (fst <$> S.maxView exDateTimes)
+
 instance ToParam AltRep where
     toParam (AltRep x) = [("ALTREP", [(NeedQuotes, T.pack $ show x)])]
 
@@ -548,12 +559,15 @@ instance ToParam DateTime where
     toParam _ = []
 
 instance ToParam DTEnd where
-    toParam DTEndDateTime {..} = toParam dtEndOther <> toParam dtEndDateTimeValue
-    toParam DTEndDate {..}     = toParam dtEndOther
+    toParam DTEndDateTime {..} = toParam dtEndOther <>
+                                 toParam dtEndDateTimeValue
+    toParam DTEndDate {..}     = [("VALUE", [(NoQuotes, "DATE")])] <>
+                                 toParam dtEndOther
 
 instance ToParam Due where
     toParam DueDateTime {..} = toParam dueOther <> toParam dueDateTimeValue
-    toParam DueDate {..}     = toParam dueOther
+    toParam DueDate {..}     = [("VALUE", [(NoQuotes, "DATE")])] <>
+                               toParam dueOther
 
 instance ToParam CN where
     toParam (CN x) = [("CN", [(Optional, x)])]
@@ -568,8 +582,13 @@ instance ToParam RDate where
     toParam RDateDates {..} = [("VALUE", [(NoQuotes, "DATE")])] <>
                               toParam rDateOther
     toParam RDatePeriods {..} = [("VALUE", [(NoQuotes, "PERIOD")])] <>
-                                toParam rDateOther
+                                toParam rDateOther <>
+                                toParam (fst <$> S.maxView rDatePeriods)
     toParam RDateDateTimes {..} = toParam rDateDateTimes <> toParam rDateOther
+
+instance ToParam Period where
+    toParam (PeriodDates x _) = toParam x
+    toParam (PeriodDuration x _) = toParam x
 
 instance ToParam DTStamp where
     toParam DTStamp {..} = toParam dtStampOther
@@ -591,7 +610,8 @@ instance ToParam (Text, [(Quoting, Text)]) where
     toParam = (:[])
 
 instance ToParam RecurrenceId where
-    toParam RecurrenceIdDate {..} = toParam recurrenceIdOther
+    toParam RecurrenceIdDate {..} = [("VALUE", [(NoQuotes, "DATE")])] <>
+                                    toParam recurrenceIdOther
     toParam RecurrenceIdDateTime {..} = toParam recurrenceIdDateTime <>
                                         toParam recurrenceIdOther
 
@@ -691,9 +711,9 @@ instance ToParam AlarmTriggerRelationship where
 
 instance ToParam Trigger where
     toParam TriggerDuration {..} = toParam triggerOther <>
-                                   toParam triggerRelated <>
-                                   [("VALUE", [(NoQuotes, "DURATION")])]
-    toParam TriggerDateTime {..} = toParam triggerOther
+                                   toParam triggerRelated
+    toParam TriggerDateTime {..} = toParam triggerOther <>
+                                   [("VALUE", [(NoQuotes, "DATE-TIME")])]
 
 -- }}}
 -- {{{ Value printers
@@ -746,7 +766,7 @@ instance IsValue Recur where
             case x of
                  Left y -> out ";UNTIL=" >> printValue y
                  Right y -> out ";COUNT=" >> printShow y
-        unless (recurInterval /= 1) $
+        when (recurInterval /= 1) $
             out ";INTERVAL=" >> printShow recurInterval
         unless (null recurBySecond) $
             out ";BYSECOND=" >> printShowN recurBySecond
@@ -760,6 +780,8 @@ instance IsValue Recur where
             out ";BYMONTHDAY=" >> printShowN recurByMonthDay
         unless (null recurByYearDay) $
             out ";BYYEARDAY=" >> printShowN recurByYearDay
+        unless (null recurByWeekNo) $
+            out ";BYWEEKNO=" >> printShowN recurByWeekNo
         unless (null recurByMonth) $
             out ";BYMONTH=" >> printShowN recurByMonth
         unless (null recurBySetPos) $
@@ -857,8 +879,12 @@ instance IsValue RecurrenceId where
     printValue RecurrenceIdDateTime {..} = printValue recurrenceIdDateTime
 
 instance IsValue Period where
-    printValue (PeriodDates f t) = printUTCTime f >> putc '/' >> printUTCTime t
-    printValue (PeriodDuration f d) = printUTCTime f >> putc '/' >> printValue d
+    printValue (PeriodDates f t) = printValue f >> putc '/' >> printValue t
+    printValue (PeriodDuration f d) = printValue f >> putc '/' >> printValue d
+
+instance IsValue UTCPeriod where
+    printValue (UTCPeriodDates f t) = printUTCTime f >> putc '/' >> printUTCTime t
+    printValue (UTCPeriodDuration f d) = printUTCTime f >> putc '/' >> printValue d
 
 instance IsValue RDate where
     printValue RDateDates {..}     = printN printValue $ S.toList rDateDates
@@ -905,7 +931,7 @@ bytestring = BS.foldl' (\m c -> m >> putc8 c) (return ())
 
 out :: Text -> ContentPrinter ()
 out t = case T.uncons t of
-             Just (c, r) -> do putc c >> out r
+             Just (c, r) -> putc c >> out r
              Nothing -> return ()
 
 putc :: Char -> ContentPrinter ()
