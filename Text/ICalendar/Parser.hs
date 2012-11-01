@@ -15,6 +15,7 @@ import Control.Monad.Error
 import Control.Monad.RWS ( runRWS )
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B
+import Data.Monoid
 
 import Text.Parsec.Prim hiding (many, (<|>))
 import Text.Parsec.Pos
@@ -32,21 +33,21 @@ import Text.ICalendar.Parser.Components
 parseICal :: DecodingFunctions
           -> FilePath
           -> ByteString
-          -> Either String (VCalendar, [String])
+          -> Either String ([VCalendar], [String])
 parseICal s f bs = do
     a <- either (Left . show) Right $ runParser parseToContent s f bs
     when (null a) $ throwError "Missing content."
-    unless (null $ drop 1 a) $ throwError "Multiple top-level components."
-    let (g, (pos, _), w) = runCP s $ parseVCalendar (head a)
-    x <- case g of
-              Left e -> Left $ show pos ++ ": " ++ e
-              Right x -> Right x
+    let xs = map (runCP s . parseVCalendar) a
+    (x, w) <- ((flip.).) flip foldM ([], []) xs $ \(x, ws) (g, (pos, _), w) ->
+             case g of
+                  Left e -> Left $ show pos ++ ": " ++ e
+                  Right y -> Right (y:x, w <> ws)
     return (x, w)
 
 -- | Parse an iCalendar file.
 parseICalFile :: DecodingFunctions
               -> FilePath
-              -> IO (Either String (VCalendar, [String]))
+              -> IO (Either String ([VCalendar], [String]))
 parseICalFile s f = parseICal s f <$> B.readFile f
 
 runCP :: DecodingFunctions -> ContentParser a
