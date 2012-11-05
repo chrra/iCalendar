@@ -659,7 +659,7 @@ instance ToParam PartStat where
     toParam Delegated           = [("PARTSTAT", [(NoQuotes, "DELEGATED")])]
     toParam PartStatCompleted   = [("PARTSTAT", [(NoQuotes, "COMPLETED")])]
     toParam InProcess           = [("PARTSTAT", [(NoQuotes, "IN-PROCESS")])]
-    toParam (PartStatX x)       = [("PARTSTAT", [(NoQuotes, CI.original x)])]
+    toParam (PartStatX x)       = [("PARTSTAT", [(Optional, CI.original x)])]
 
 instance ToParam RelationshipType where
     toParam x | x == def          = []
