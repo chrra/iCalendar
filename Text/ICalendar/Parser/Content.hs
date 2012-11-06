@@ -1,20 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Text.ICalendar.Parser.Content where
 
-import Control.Applicative
-import Control.Monad
-import Data.ByteString.Lazy (ByteString)
+import           Control.Applicative
+import           Control.Monad
+import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy.Builder as Bu
-import Data.CaseInsensitive (CI)
-import Data.Char
-import Data.Monoid
-import Data.Text.Lazy (Text)
+import           Data.CaseInsensitive         (CI)
+import           Data.Char
+import           Data.Monoid
+import           Data.Text.Lazy               (Text)
 
-import qualified Text.Parsec as P
-import Text.Parsec.Prim hiding (many, (<|>))
-import Text.Parsec.Combinator hiding (optional)
-import Text.Parsec.ByteString.Lazy ()
-import Text.Parsec.Text.Lazy ()
+import qualified Text.Parsec                 as P
+import           Text.Parsec.ByteString.Lazy ()
+import           Text.Parsec.Combinator      hiding (optional)
+import           Text.Parsec.Prim            hiding (many, (<|>))
+import           Text.Parsec.Text.Lazy       ()
 
 import Text.ICalendar.Parser.Common
 

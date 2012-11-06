@@ -1,31 +1,31 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 module Text.ICalendar.Parser
     ( parseICal
     , parseICalFile
     , DecodingFunctions(..)
     ) where
 
-import Prelude
-import Control.Applicative
-import Control.Monad
-import Control.Monad.Error
-import Control.Monad.RWS ( runRWS )
-import Data.ByteString.Lazy (ByteString)
+import           Control.Applicative
+import           Control.Monad
+import           Control.Monad.Error
+import           Control.Monad.RWS          (runRWS)
+import           Data.ByteString.Lazy       (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Monoid
+import           Data.Monoid
+import           Prelude
 
-import Text.Parsec.Prim hiding (many, (<|>))
-import Text.Parsec.Pos
 import Text.Parsec.ByteString.Lazy ()
-import Text.Parsec.Text.Lazy ()
+import Text.Parsec.Pos
+import Text.Parsec.Prim            hiding (many, (<|>))
+import Text.Parsec.Text.Lazy       ()
 
-import Text.ICalendar.Types
 import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Content
 import Text.ICalendar.Parser.Components
+import Text.ICalendar.Parser.Content
+import Text.ICalendar.Types
 
 
 -- | Parse a ByteString containing iCalendar data.

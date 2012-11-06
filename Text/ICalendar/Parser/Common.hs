@@ -1,38 +1,39 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Text.ICalendar.Parser.Common where
 
-import Prelude hiding (mapM)
-import Control.Applicative
-import Control.Arrow (second)
-import Control.Monad.Error hiding (mapM)
-import Control.Monad.RWS ( RWS, MonadWriter(tell) , MonadState(get, put), asks
-                         , modify )
-import Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B
+import           Control.Applicative
+import           Control.Arrow                (second)
+import           Control.Monad.Error          hiding (mapM)
+import           Control.Monad.RWS            (MonadState (get, put),
+                                               MonadWriter (tell), RWS, asks,
+                                               modify)
 import qualified Data.ByteString.Lazy.Builder as Bu
-import Data.CaseInsensitive (CI)
-import qualified Data.CaseInsensitive as CI
-import Data.Char
-import Data.Default
-import Data.List (partition)
-import Data.Maybe
-import Data.Monoid
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Encoding as TE
-import Data.Time ( UTCTime(UTCTime), LocalTime(LocalTime), Day
-                 , TimeOfDay())
-import qualified Data.Time as Time
-import Data.Traversable (mapM)
-import qualified Network.URI as URI
-import qualified System.Locale as L
+import           Data.ByteString.Lazy.Char8   (ByteString)
+import qualified Data.ByteString.Lazy.Char8   as B
+import           Data.CaseInsensitive         (CI)
+import qualified Data.CaseInsensitive         as CI
+import           Data.Char
+import           Data.Default
+import           Data.List                    (partition)
+import           Data.Maybe
+import           Data.Monoid
+import           Data.Set                     (Set)
+import qualified Data.Set                     as S
+import           Data.Text.Lazy               (Text)
+import qualified Data.Text.Lazy               as T
+import qualified Data.Text.Lazy.Encoding      as TE
+import           Data.Time                    (Day, LocalTime (LocalTime),
+                                               TimeOfDay (), UTCTime (UTCTime))
+import qualified Data.Time                    as Time
+import           Data.Traversable             (mapM)
+import qualified Network.URI                  as URI
+import           Prelude                      hiding (mapM)
+import qualified System.Locale                as L
 
-import qualified Text.Parsec as P
-import Text.Parsec.Prim hiding ((<|>))
-import Text.Parsec.Combinator hiding (optional)
+import qualified Text.Parsec            as P
+import           Text.Parsec.Combinator hiding (optional)
+import           Text.Parsec.Prim       hiding ((<|>))
 
 import Text.ICalendar.Types
 
@@ -49,7 +50,7 @@ type ContentParser = ErrorT String -- Fatal errors.
 
 -- | Functions for decoding 'ByteString's into 'Text'.
 data DecodingFunctions = DecodingFunctions
-    { dfBS2Text :: ByteString -> Text
+    { dfBS2Text  :: ByteString -> Text
     , dfBS2IText :: ByteString -> CI Text
     }
 

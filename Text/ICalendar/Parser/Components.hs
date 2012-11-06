@@ -1,19 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards   #-}
 module Text.ICalendar.Parser.Components where
 
-import Control.Applicative
-import Control.Monad.Error hiding (mapM)
-import Control.Monad.RWS ( MonadState(get), tell )
+import           Control.Applicative
+import           Control.Monad.Error  hiding (mapM)
+import           Control.Monad.RWS    (MonadState (get), tell)
 import qualified Data.CaseInsensitive as CI
-import Data.List (partition)
-import Data.Maybe
-import Data.Set (Set)
-import qualified Data.Set as S
+import qualified Data.Foldable        as F
+import           Data.List            (partition)
+import qualified Data.Map             as M
+import           Data.Maybe
+import           Data.Set             (Set)
+import qualified Data.Set             as S
+import           Data.Text.Lazy       (Text)
 
-import Text.ICalendar.Types
 import Text.ICalendar.Parser.Common
 import Text.ICalendar.Parser.Properties
+import Text.ICalendar.Types
 
 -- | Parse a VCALENDAR component. 3.4
 parseVCalendar :: Content -> ContentParser VCalendar
@@ -22,14 +25,20 @@ parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
     vcVersion <- reqLine1 "VERSION" parseVersion
     vcScale <- optLine1 "CALSCALE" (parseSimpleI Scale)
     vcMethod <- optLine1 "METHOD" (parseSimpleI ((Just .) . Method))
-    vcTimeZones <- optCompN "VTIMEZONE" parseVTimeZone
-    vcEvents <- optCompN "VEVENT" (parseVEvent vcMethod)
-    vcTodos <- optCompN "VTODO" parseVTodo
-    vcJournals <- optCompN "VJOURNAL" parseVJournal
-    vcFreeBusys <- optCompN "VFREEBUSY" parseVFreeBusy
+    vcTimeZones <- f (tzidValue . vtzId) =<< optCompN "VTIMEZONE" parseVTimeZone
+    vcEvents <- f (uidValue . veUID)=<< optCompN "VEVENT" (parseVEvent vcMethod)
+    vcTodos <- f (uidValue . vtUID) =<< optCompN "VTODO" parseVTodo
+    vcJournals <- f (uidValue . vjUID) =<< optCompN "VJOURNAL" parseVJournal
+    vcFreeBusys <- f (uidValue . vfbUID) =<< optCompN "VFREEBUSY" parseVFreeBusy
     vcOtherComps <- otherComponents
     vcOther <- otherProperties
     return VCalendar {..}
+  where f :: (a -> Text) -> Set a -> ContentParser (M.Map Text a)
+        f g = F.foldlM h M.empty
+          where h m e = let k = g e
+                         in if k `M.member` m
+                               then throwError "Duplicate UID/TZID."
+                               else return $ M.insert k e m
 parseVCalendar _ = throwError "parseVCalendar: Content given not a VCALENDAR\
                               \ component."
 

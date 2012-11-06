@@ -1,39 +1,40 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TupleSections     #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICal
     ) where
 
-import Prelude hiding (mapM_)
-import Control.Applicative
-import Control.Arrow ((&&&))
-import Control.Monad hiding (mapM_, forM_)
-import Control.Monad.RWS ( RWS, runRWS, MonadWriter(tell)
-                         , MonadState(get, put), asks, modify)
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.ByteString.Lazy.Builder (Builder)
+import           Control.Applicative
+import           Control.Arrow                ((&&&))
+import           Control.Monad                hiding (forM_, mapM_)
+import           Control.Monad.RWS            (MonadState (get, put),
+                                               MonadWriter (tell), RWS, asks,
+                                               modify, runRWS)
+import           Data.ByteString.Lazy         (ByteString)
+import           Data.ByteString.Lazy.Builder (Builder)
 import qualified Data.ByteString.Lazy.Builder as Bu
-import qualified Data.CaseInsensitive as CI
-import Data.Char (ord, toUpper)
-import Data.Default
-import Data.Foldable (mapM_, forM_)
-import Data.Monoid
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as T
-import Data.Time (FormatTime())
-import qualified Data.Time as Time
-import qualified Data.Version as Ver
-import qualified Network.URI as URI
-import qualified System.Locale as L
-import Text.Printf (printf)
+import qualified Data.ByteString.Lazy.Char8   as BS
+import qualified Data.CaseInsensitive         as CI
+import           Data.Char                    (ord, toUpper)
+import           Data.Default
+import           Data.Foldable                (forM_, mapM_)
+import           Data.Monoid
+import           Data.Set                     (Set)
+import qualified Data.Set                     as S
+import           Data.Text.Lazy               (Text)
+import qualified Data.Text.Lazy               as T
+import           Data.Time                    (FormatTime ())
+import qualified Data.Time                    as Time
+import qualified Data.Version                 as Ver
+import qualified Network.URI                  as URI
+import           Prelude                      hiding (mapM_)
+import qualified System.Locale                as L
+import           Text.Printf                  (printf)
 
-import Codec.MIME.Type (showMIMEType, MIMEType)
+import           Codec.MIME.Type             (MIMEType, showMIMEType)
 import qualified Data.ByteString.Base64.Lazy as B64
 
 import Text.ICalendar.Types
@@ -352,7 +353,7 @@ instance IsProperty Class where
                                                      printValue classValue
 
 instance IsProperty Created where
-    printProperty Created {..} = ln $ do 
+    printProperty Created {..} = ln $ do
         prop "CREATED" $ toParam createdOther <> toParam createdValue
         printValue createdValue
 
@@ -513,7 +514,7 @@ prop :: ToParam a
      -> a
      -> ContentPrinter ()
 prop b x = do
-    put (fromIntegral $ BS.length b) -- 
+    put (fromIntegral $ BS.length b)
     tell (Bu.lazyByteString b)
     mapM_ param $ toParam x
     out ":"

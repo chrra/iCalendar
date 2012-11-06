@@ -1,20 +1,23 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings  #-}
 -- | ICalendar types, based on RFC5545.
 module Text.ICalendar.Types
     ( module Text.ICalendar.Types
     ) where
 
-import Codec.MIME.Type (MIMEType)
-import Data.ByteString.Lazy.Char8 (ByteString)
-import Data.CaseInsensitive (CI)
-import Data.Default
-import Data.Set (Set)
-import Data.Text.Lazy (Text)
-import Data.Time
-import Data.Typeable (Typeable)
-import Data.Version (Version(..))
-import Network.URI (URI)
+import           Codec.MIME.Type            (MIMEType)
+import           Data.ByteString.Lazy.Char8 (ByteString)
+import           Data.CaseInsensitive       (CI)
+import           Data.Default
+import           Data.Map                   (Map)
+import qualified Data.Map                   as M
+import           Data.Monoid
+import           Data.Set                   (Set)
+import           Data.Text.Lazy             (Text)
+import           Data.Time
+import           Data.Typeable              (Typeable)
+import           Data.Version               (Version (..))
+import           Network.URI                (URI)
 
 -- | Language.
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
@@ -40,11 +43,11 @@ data VCalendar = VCalendar
     , vcScale      :: Scale
     , vcMethod     :: Maybe Method
     , vcOther      :: Set OtherProperty
-    , vcTimeZones  :: Set VTimeZone
-    , vcEvents     :: Set VEvent
-    , vcTodos      :: Set VTodo
-    , vcJournals   :: Set VJournal
-    , vcFreeBusys  :: Set VFreeBusy
+    , vcTimeZones  :: Map Text VTimeZone
+    , vcEvents     :: Map Text VEvent
+    , vcTodos      :: Map Text VTodo
+    , vcJournals   :: Map Text VJournal
+    , vcFreeBusys  :: Map Text VFreeBusy
     , vcOtherComps :: Set VOther
     } deriving (Show, Eq, Ord, Typeable)
 
@@ -52,6 +55,59 @@ instance Default VCalendar where
     def = VCalendar (ProdId "-//haskell.org/NONSGML iCalendar-0.1//EN" def)
                     (MaxICalVersion (Version [2,0] []) def)
                     def Nothing def def def def def def def
+
+-- | iTIP is ignored at the moment.
+--
+-- Picks the left in most cases.
+--
+-- On UID/TZID clash, picks the 'VEvent's, 'VTodo's and 'VJournal's with the
+-- highest 'Sequence', the 'VTimeZone's with the highest 'LastModified',
+-- and merges the 'VFreeBusy' content.
+--
+-- If the Sequence or LastModified is the same, picks the left.
+instance Monoid VCalendar where
+    mempty = def
+    mappend a b = VCalendar { vcProdId     = vcProdId a
+                            , vcVersion    = vcVersion a
+                            , vcScale      = vcScale a
+                            , vcMethod     = vcMethod a
+                            , vcOther      = vcOther a <> vcOther b
+                            , vcTimeZones  = merge tz (vcTimeZones a)
+                                                      (vcTimeZones b)
+                            , vcEvents     = merge ev (vcEvents a) (vcEvents b)
+                            , vcTodos      = merge td (vcTodos a) (vcTodos b)
+                            , vcJournals   = merge jo (vcJournals a)
+                                                      (vcJournals b)
+                            , vcFreeBusys  = merge fb (vcFreeBusys a)
+                                                      (vcFreeBusys b)
+                            , vcOtherComps = vcOtherComps a <> vcOtherComps b
+                            }
+      where merge f = M.mergeWithKey (((Just .) .) . const f) id id
+            tz c d = if vtzLastMod c >= vtzLastMod d then c else d
+            ev c d = if veSeq c >= veSeq d then c else d
+            td c d = if vtSeq c >= vtSeq d then c else d
+            jo c d = if vjSeq c >= vjSeq d then c else d
+            fb c d = VFreeBusy { vfbDTStamp   = vfbDTStamp c
+                               , vfbUID       = vfbUID c
+                               , vfbContact   = getFirst $ First (vfbContact c)
+                                                        <> First (vfbContact d)
+                               , vfbDTStart   = getFirst $ First (vfbDTStart c)
+                                                        <> First (vfbDTStart d)
+                               , vfbDTEnd     = getFirst $ First (vfbDTEnd c)
+                                                        <> First (vfbDTEnd d)
+                               , vfbOrganizer = getFirst $
+                                                    First (vfbOrganizer c) <>
+                                                    First (vfbOrganizer d)
+                               , vfbUrl       = getFirst $ First (vfbUrl c)
+                                                        <> First (vfbUrl d)
+                               , vfbAttendee  = vfbAttendee c <> vfbAttendee d
+                               , vfbComment   = vfbComment c <> vfbComment d
+                               , vfbFreeBusy  = vfbFreeBusy c <> vfbFreeBusy d
+                               , vfbRStatus   = vfbRStatus c <> vfbRStatus d
+                               , vfbOther     = vfbOther c <> vfbOther d
+                               }
+
+
 
 -- | Product Identifier. 3.7.3.
 data ProdId = ProdId
@@ -123,92 +179,92 @@ data VEvent = VEvent
 
 -- | To-Do Component. 3.6.2
 data VTodo = VTodo
-    { vtDTStamp       :: DTStamp
-    , vtUID           :: UID
-    , vtClass         :: Class -- ^ 'def' = 'Public'
-    , vtCompleted     :: Maybe Completed
-    , vtCreated       :: Maybe Created
-    , vtDescription   :: Maybe Description
-    , vtDTStart       :: Maybe DTStart
-    , vtGeo           :: Maybe Geo
-    , vtLastMod       :: Maybe LastModified
-    , vtLocation      :: Maybe Location
-    , vtOrganizer     :: Maybe Organizer
-    , vtPercent       :: Maybe PercentComplete
-    , vtPriority      :: Priority -- ^ 'def' = 0
-    , vtRecurId       :: Maybe RecurrenceId
-    , vtSeq           :: Sequence -- ^ 'def' = 0
-    , vtStatus        :: Maybe TodoStatus
-    , vtSummary       :: Maybe Summary
-    , vtUrl           :: Maybe URL
-    , vtRRule         :: Set RRule
-    , vtDueDuration   :: Maybe (Either Due DurationProp)
-    , vtAttach        :: Set Attachment
-    , vtAttendee      :: Set Attendee
-    , vtCategories    :: Set Categories
-    , vtComment       :: Set Comment
-    , vtContact       :: Set Contact
-    , vtExDate        :: Set ExDate
-    , vtRStatus       :: Set RequestStatus
-    , vtRelated       :: Set RelatedTo
-    , vtResources     :: Set Resources
-    , vtRDate         :: Set RDate
-    , vtAlarms        :: Set VAlarm
-    , vtOther         :: Set OtherProperty
+    { vtDTStamp     :: DTStamp
+    , vtUID         :: UID
+    , vtClass       :: Class -- ^ 'def' = 'Public'
+    , vtCompleted   :: Maybe Completed
+    , vtCreated     :: Maybe Created
+    , vtDescription :: Maybe Description
+    , vtDTStart     :: Maybe DTStart
+    , vtGeo         :: Maybe Geo
+    , vtLastMod     :: Maybe LastModified
+    , vtLocation    :: Maybe Location
+    , vtOrganizer   :: Maybe Organizer
+    , vtPercent     :: Maybe PercentComplete
+    , vtPriority    :: Priority -- ^ 'def' = 0
+    , vtRecurId     :: Maybe RecurrenceId
+    , vtSeq         :: Sequence -- ^ 'def' = 0
+    , vtStatus      :: Maybe TodoStatus
+    , vtSummary     :: Maybe Summary
+    , vtUrl         :: Maybe URL
+    , vtRRule       :: Set RRule
+    , vtDueDuration :: Maybe (Either Due DurationProp)
+    , vtAttach      :: Set Attachment
+    , vtAttendee    :: Set Attendee
+    , vtCategories  :: Set Categories
+    , vtComment     :: Set Comment
+    , vtContact     :: Set Contact
+    , vtExDate      :: Set ExDate
+    , vtRStatus     :: Set RequestStatus
+    , vtRelated     :: Set RelatedTo
+    , vtResources   :: Set Resources
+    , vtRDate       :: Set RDate
+    , vtAlarms      :: Set VAlarm
+    , vtOther       :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Journal Component. 3.6.3
 data VJournal = VJournal
-    { vjDTStamp       :: DTStamp
-    , vjUID           :: UID
-    , vjClass         :: Class -- ^ 'def' = 'Public'
-    , vjCreated       :: Maybe Created
-    , vjDTStart       :: Maybe DTStart
-    , vjLastMod       :: Maybe LastModified
-    , vjOrganizer     :: Maybe Organizer
-    , vjRecurId       :: Maybe RecurrenceId
-    , vjSeq           :: Sequence -- ^ 'def' = 0
-    , vjStatus        :: Maybe JournalStatus
-    , vjSummary       :: Maybe Summary
-    , vjUrl           :: Maybe URL
-    , vjRRule         :: Set RRule
-    , vjAttach        :: Set Attachment
-    , vjAttendee      :: Set Attendee
-    , vjCategories    :: Set Categories
-    , vjComment       :: Set Comment
-    , vjContact       :: Set Contact
-    , vjDescription   :: Set Description
-    , vjExDate        :: Set ExDate
-    , vjRelated       :: Set RelatedTo
-    , vjRDate         :: Set RDate
-    , vjRStatus       :: Set RequestStatus
-    , vjOther         :: Set OtherProperty
+    { vjDTStamp     :: DTStamp
+    , vjUID         :: UID
+    , vjClass       :: Class -- ^ 'def' = 'Public'
+    , vjCreated     :: Maybe Created
+    , vjDTStart     :: Maybe DTStart
+    , vjLastMod     :: Maybe LastModified
+    , vjOrganizer   :: Maybe Organizer
+    , vjRecurId     :: Maybe RecurrenceId
+    , vjSeq         :: Sequence -- ^ 'def' = 0
+    , vjStatus      :: Maybe JournalStatus
+    , vjSummary     :: Maybe Summary
+    , vjUrl         :: Maybe URL
+    , vjRRule       :: Set RRule
+    , vjAttach      :: Set Attachment
+    , vjAttendee    :: Set Attendee
+    , vjCategories  :: Set Categories
+    , vjComment     :: Set Comment
+    , vjContact     :: Set Contact
+    , vjDescription :: Set Description
+    , vjExDate      :: Set ExDate
+    , vjRelated     :: Set RelatedTo
+    , vjRDate       :: Set RDate
+    , vjRStatus     :: Set RequestStatus
+    , vjOther       :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Free/Busy Component. 3.6.4
 data VFreeBusy = VFreeBusy
-    { vfbDTStamp       :: DTStamp
-    , vfbUID           :: UID
-    , vfbContact       :: Maybe Contact
-    , vfbDTStart       :: Maybe DTStart
-    , vfbDTEnd         :: Maybe DTEnd
-    , vfbOrganizer     :: Maybe Organizer
-    , vfbUrl           :: Maybe URL
-    , vfbAttendee      :: Set Attendee
-    , vfbComment       :: Set Comment
-    , vfbFreeBusy      :: Set FreeBusy
-    , vfbRStatus       :: Set RequestStatus
-    , vfbOther         :: Set OtherProperty
+    { vfbDTStamp   :: DTStamp
+    , vfbUID       :: UID
+    , vfbContact   :: Maybe Contact
+    , vfbDTStart   :: Maybe DTStart
+    , vfbDTEnd     :: Maybe DTEnd
+    , vfbOrganizer :: Maybe Organizer
+    , vfbUrl       :: Maybe URL
+    , vfbAttendee  :: Set Attendee
+    , vfbComment   :: Set Comment
+    , vfbFreeBusy  :: Set FreeBusy
+    , vfbRStatus   :: Set RequestStatus
+    , vfbOther     :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Time Zone Component. 3.6.5.
 data VTimeZone = VTimeZone
-    { vtzId            :: TZID
-    , vtzLastMod       :: Maybe LastModified
-    , vtzUrl           :: Maybe TZUrl
-    , vtzStandardC     :: Set TZProp
-    , vtzDaylightC     :: Set TZProp
-    , vtzOther         :: Set OtherProperty
+    { vtzId        :: TZID
+    , vtzLastMod   :: Maybe LastModified
+    , vtzUrl       :: Maybe TZUrl
+    , vtzStandardC :: Set TZProp
+    , vtzDaylightC :: Set TZProp
+    , vtzOther     :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Time zone property, also 3.6.5.
@@ -261,7 +317,7 @@ data VAlarm
 
 -- | Any other component not recognized.
 data VOther = VOther
-    { voName :: CI Text
+    { voName  :: CI Text
     , voProps :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable)
 
@@ -407,7 +463,7 @@ data DateTime
     { dateTimeFloating :: LocalTime
     }
     | UTCDateTime
-    { dateTimeUTC      :: UTCTime
+    { dateTimeUTC :: UTCTime
     }
     | ZonedDateTime
     { dateTimeFloating :: LocalTime
@@ -421,8 +477,8 @@ data DTEnd
     , dtEndOther         :: OtherParams
     }
     | DTEndDate
-    { dtEndDateValue     :: Date
-    , dtEndOther         :: OtherParams
+    { dtEndDateValue :: Date
+    , dtEndOther     :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Date-Time Due. 3.8.2.3.
@@ -432,8 +488,8 @@ data Due
     , dueOther         :: OtherParams
     }
     | DueDate
-    { dueDateValue     :: Date
-    , dueOther         :: OtherParams
+    { dueDateValue :: Date
+    , dueOther     :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Date-Time Start. 3.8.2.4.
@@ -443,8 +499,8 @@ data DTStart
     , dtStartOther         :: OtherParams
     }
     | DTStartDate
-    { dtStartDateValue     :: Date
-    , dtStartOther         :: OtherParams
+    { dtStartDateValue :: Date
+    , dtStartOther     :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Duration value. 3.3.6.
@@ -463,8 +519,8 @@ data Duration -- TODO(?): Convert to DiffTime?
     , durSecond :: Int
     }
     | DurationWeek
-    { durSign   :: Sign
-    , durWeek   :: Int
+    { durSign :: Sign
+    , durWeek :: Int
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Sign.
