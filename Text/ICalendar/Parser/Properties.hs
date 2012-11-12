@@ -198,8 +198,7 @@ parseDurationProp _ x = throwError $ "parseDurationProp: " ++ show x
 
 parseRecurId :: Maybe DTStart -> Content -> ContentParser RecurrenceId
 parseRecurId dts (ContentLine p "RECURRENCE-ID" o bs) = do
-    range' <- maybe (return def) (parseRange . CI.mk <=< paramOnlyOne) $
-                                   lookup "RANGE" o
+    range' <- mapM (parseRange . CI.mk <=< paramOnlyOne) $ lookup "RANGE" o
     recurid <- parseSimpleDateOrDateTime
             (($ range') . RecurrenceIdDateTime)
             (($ range') . RecurrenceIdDate)

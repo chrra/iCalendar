@@ -682,21 +682,18 @@ data Organizer = Organizer
 data RecurrenceId
     = RecurrenceIdDate
     { recurrenceIdDate  :: Date
-    , recurrenceIdRange :: Range -- ^ 'def' = 'ThisAndFuture'
+    , recurrenceIdRange :: Maybe Range
     , recurrenceIdOther :: OtherParams
     }
     | RecurrenceIdDateTime
     { recurrenceIdDateTime :: DateTime
-    , recurrenceIdRange    :: Range -- ^ 'def' = 'ThisAndFuture'
+    , recurrenceIdRange    :: Maybe Range
     , recurrenceIdOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Recurrence Identifier Range. 3.2.13
 data Range = ThisAndFuture | ThisAndPrior
              deriving (Show, Eq, Ord, Typeable)
-
-instance Default Range where
-    def = ThisAndFuture
 
 -- | Related To. 3.8.4.5.
 data RelatedTo = RelatedTo

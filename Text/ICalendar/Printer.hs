@@ -606,9 +606,15 @@ instance ToParam (Text, [(Quoting, Text)]) where
 
 instance ToParam RecurrenceId where
     toParam RecurrenceIdDate {..} = [("VALUE", [(NoQuotes, "DATE")])] <>
+                                    toParam recurrenceIdRange <>
                                     toParam recurrenceIdOther
     toParam RecurrenceIdDateTime {..} = toParam recurrenceIdDateTime <>
+                                        toParam recurrenceIdRange <>
                                         toParam recurrenceIdOther
+
+instance ToParam Range where
+    toParam ThisAndFuture = [("RANGE", [(NoQuotes, "THISANDFUTURE")])]
+    toParam _ = [] -- ThisAndPrior MUST NOT be generated.
 
 instance ToParam FBType where
     toParam x | x == def    = []
