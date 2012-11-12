@@ -65,7 +65,7 @@ parseText' bs = do c <- asks dfBS2Text
                         Left e -> throwError $ "parseText': " ++ show e
                         Right (x, r) -> return ( map (c . Bu.toLazyByteString) x
                                                , r)
-  where texts = sepBy text (P.char ',')
+  where texts = sepBy1 text (P.char ',') <|> return [mempty]
         text = do x <- P.satisfy isTSafe'
                   case x of
                        '\\' -> do y <- P.anyChar

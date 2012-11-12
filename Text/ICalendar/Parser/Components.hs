@@ -3,6 +3,7 @@
 module Text.ICalendar.Parser.Components where
 
 import           Control.Applicative
+import           Control.Arrow        ((&&&))
 import           Control.Monad.Error  hiding (mapM)
 import           Control.Monad.RWS    (MonadState (get), tell)
 import qualified Data.CaseInsensitive as CI
@@ -12,7 +13,6 @@ import qualified Data.Map             as M
 import           Data.Maybe
 import           Data.Set             (Set)
 import qualified Data.Set             as S
-import           Data.Text.Lazy       (Text)
 
 import Text.ICalendar.Parser.Common
 import Text.ICalendar.Parser.Properties
@@ -26,18 +26,25 @@ parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
     vcScale <- optLine1 "CALSCALE" (parseSimpleI Scale)
     vcMethod <- optLine1 "METHOD" (parseSimpleI ((Just .) . Method))
     vcTimeZones <- f (tzidValue . vtzId) =<< optCompN "VTIMEZONE" parseVTimeZone
-    vcEvents <- f (uidValue . veUID)=<< optCompN "VEVENT" (parseVEvent vcMethod)
-    vcTodos <- f (uidValue . vtUID) =<< optCompN "VTODO" parseVTodo
-    vcJournals <- f (uidValue . vjUID) =<< optCompN "VJOURNAL" parseVJournal
+    vcEvents <- f (uidValue . veUID &&& recur . veRecurId)
+                    =<< optCompN "VEVENT" (parseVEvent vcMethod)
+    vcTodos <- f (uidValue . vtUID &&& recur . vtRecurId)
+                    =<< optCompN "VTODO" parseVTodo
+    vcJournals <- f (uidValue . vjUID &&& recur . vjRecurId)
+                    =<< optCompN "VJOURNAL" parseVJournal
     vcFreeBusys <- f (uidValue . vfbUID) =<< optCompN "VFREEBUSY" parseVFreeBusy
     vcOtherComps <- otherComponents
     vcOther <- otherProperties
     return VCalendar {..}
-  where f :: (a -> Text) -> Set a -> ContentParser (M.Map Text a)
+  where recur :: Maybe RecurrenceId -> Maybe (Either Date DateTime)
+        recur Nothing = Nothing
+        recur (Just (RecurrenceIdDate x _ _)) = Just (Left x)
+        recur (Just (RecurrenceIdDateTime x _ _)) = Just (Right x)
+        f :: Ord b => (a -> b) -> Set a -> ContentParser (M.Map b a)
         f g = F.foldlM h M.empty
           where h m e = let k = g e
                          in if k `M.member` m
-                               then throwError "Duplicate UID/TZID."
+                               then throwError "Duplicate UID/RecurId/TZID."
                                else return $ M.insert k e m
 parseVCalendar _ = throwError "parseVCalendar: Content given not a VCALENDAR\
                               \ component."

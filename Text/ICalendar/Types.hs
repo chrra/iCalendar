@@ -44,10 +44,15 @@ data VCalendar = VCalendar
     , vcMethod     :: Maybe Method
     , vcOther      :: Set OtherProperty
     , vcTimeZones  :: Map Text VTimeZone
-    , vcEvents     :: Map Text VEvent
-    , vcTodos      :: Map Text VTodo
-    , vcJournals   :: Map Text VJournal
+    -- ^ Map TZID-value VTimeZone
+    , vcEvents     :: Map (Text, Maybe (Either Date DateTime)) VEvent
+    -- ^ Map (UID-value, Maybe RecurrenceID-value) VEvent
+    , vcTodos      :: Map (Text, Maybe (Either Date DateTime)) VTodo
+    -- ^ Map (UID-value, Maybe RecurrenceID-value) VTodo
+    , vcJournals   :: Map (Text, Maybe (Either Date DateTime)) VJournal
+    -- ^ Map (UID-value, Maybe RecurrenceID-value) VJournal
     , vcFreeBusys  :: Map Text VFreeBusy
+    -- ^ Map UID-value VFreeBusy
     , vcOtherComps :: Set VOther
     } deriving (Show, Eq, Ord, Typeable)
 
@@ -56,15 +61,15 @@ instance Default VCalendar where
                     (MaxICalVersion (Version [2,0] []) def)
                     def Nothing def def def def def def def
 
--- | iTIP is ignored at the moment.
+-- | 'vcMethod' is ignored at the moment.
 --
 -- Picks the left in most cases.
 --
--- On UID/TZID clash, picks the 'VEvent's, 'VTodo's and 'VJournal's with the
--- highest 'Sequence', the 'VTimeZone's with the highest 'LastModified',
--- and merges the 'VFreeBusy' content.
+-- On UID/RecurrenceId/TZID clash, picks the 'VEvent's, 'VTodo's and
+-- 'VJournal's with the highest ('Sequence', 'DTStamp'), the 'VTimeZone's
+-- with the highest 'LastModified', and 'VFreeBusy' with the highest 'DTStamp'.
 --
--- If the Sequence or LastModified is the same, picks the left.
+-- If the Sequence, DTStamp or LastModified is the same, picks the left.
 instance Monoid VCalendar where
     mempty = def
     mappend a b = VCalendar { vcProdId     = vcProdId a
@@ -84,30 +89,13 @@ instance Monoid VCalendar where
                             }
       where merge f = M.mergeWithKey (((Just .) .) . const f) id id
             tz c d = if vtzLastMod c >= vtzLastMod d then c else d
-            ev c d = if veSeq c >= veSeq d then c else d
-            td c d = if vtSeq c >= vtSeq d then c else d
-            jo c d = if vjSeq c >= vjSeq d then c else d
-            fb c d = VFreeBusy { vfbDTStamp   = vfbDTStamp c
-                               , vfbUID       = vfbUID c
-                               , vfbContact   = getFirst $ First (vfbContact c)
-                                                        <> First (vfbContact d)
-                               , vfbDTStart   = getFirst $ First (vfbDTStart c)
-                                                        <> First (vfbDTStart d)
-                               , vfbDTEnd     = getFirst $ First (vfbDTEnd c)
-                                                        <> First (vfbDTEnd d)
-                               , vfbOrganizer = getFirst $
-                                                    First (vfbOrganizer c) <>
-                                                    First (vfbOrganizer d)
-                               , vfbUrl       = getFirst $ First (vfbUrl c)
-                                                        <> First (vfbUrl d)
-                               , vfbAttendee  = vfbAttendee c <> vfbAttendee d
-                               , vfbComment   = vfbComment c <> vfbComment d
-                               , vfbFreeBusy  = vfbFreeBusy c <> vfbFreeBusy d
-                               , vfbRStatus   = vfbRStatus c <> vfbRStatus d
-                               , vfbOther     = vfbOther c <> vfbOther d
-                               }
-
-
+            ev c d = if (veSeq c, veDTStamp c) >= (veSeq d, veDTStamp d)
+                        then c else d
+            td c d = if (vtSeq c, vtDTStamp c) >= (vtSeq d, vtDTStamp d)
+                        then c else d
+            jo c d = if (vjSeq c, vjDTStamp c) >= (vjSeq d, vjDTStamp d)
+                        then c else d
+            fb c d = if vfbDTStamp c >= vfbDTStamp d then c else d
 
 -- | Product Identifier. 3.7.3.
 data ProdId = ProdId
