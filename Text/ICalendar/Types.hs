@@ -13,11 +13,13 @@ import           Data.Map                   (Map)
 import qualified Data.Map                   as M
 import           Data.Monoid
 import           Data.Set                   (Set)
-import           Data.Text.Lazy             (Text)
+import           Data.Text.Lazy             (Text, pack)
 import           Data.Time
 import           Data.Typeable              (Typeable)
-import           Data.Version               (Version (..))
+import           Data.Version               (Version (..), showVersion)
 import           Network.URI                (URI)
+
+import Paths_iCalendar (version)
 
 -- | Language.
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
@@ -57,7 +59,8 @@ data VCalendar = VCalendar
     } deriving (Show, Eq, Ord, Typeable)
 
 instance Default VCalendar where
-    def = VCalendar (ProdId "-//haskell.org/NONSGML iCalendar-0.1//EN" def)
+    def = VCalendar (ProdId ("-//haskell.org/NONSGML iCalendar-" <>
+                             pack (showVersion version) <> "//EN") def)
                     (MaxICalVersion (Version [2,0] []) def)
                     def Nothing def def def def def def def
 

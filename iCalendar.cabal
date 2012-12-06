@@ -30,6 +30,7 @@ library
                      , Text.ICalendar.Parser.Content
                      , Text.ICalendar.Parser.Parameters
                      , Text.ICalendar.Parser.Properties
+                     , Paths_iCalendar
   build-depends:       base ==4.*, time ==1.4.*, data-default >=0.3
                      , case-insensitive ==0.4.*, network ==2.4.*
                      , bytestring >=0.10 && < 0.11, parsec ==3.1.*
