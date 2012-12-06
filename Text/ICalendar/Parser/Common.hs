@@ -76,9 +76,10 @@ parseText' bs = do c <- asks dfBS2Text
                                        z | z `elem` "nN" -> nxt '\n'
                                        _ -> fail $ "unexpected " ++ show x
                        y -> nxt y
-        -- isTSafe + 0x22, 0x3A
+        -- isTSafe + 0x22, 0x3A, and 0x5C is pattern matched against.
         isTSafe' c = let n = ord c
-                      in n == 9 || (n >= 0x20 && n <= 0x3A)
+                      in n == 9 || (n >= 0x20 && n <= 0x2B)
+                                || (n >= 0x2D && n <= 0x3A)
                                 || (n >= 0x3C && n /= 0x7F)
         nxt c = (Bu.char8 c <>) <$> (text <|> return mempty)
 
