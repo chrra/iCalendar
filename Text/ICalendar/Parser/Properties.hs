@@ -341,6 +341,14 @@ parseRRule (Just dts) (ContentLine _ "RRULE" o bs) =
                        return . RRule y $ toO o
 parseRRule _ x = throwError $ "parseRRule: " ++ show x
 
+-- | Parse Created, 3.8.7.3
+parseCreated :: Content -> ContentParser Created
+parseCreated (ContentLine _ "CREATED" o bs) = do
+    createdValue <- mustBeUTC =<< parseDateTime Nothing bs
+    let createdOther = toO o
+    return Created {..}
+parseCreated x = throwError $ "parseCreated: " ++ show x
+
 -- | Parse Last Modified, 3.8.7.3
 parseLastModified :: Content -> ContentParser LastModified
 parseLastModified (ContentLine _ "LAST-MODIFIED" o bs) = do

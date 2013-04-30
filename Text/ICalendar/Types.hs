@@ -808,7 +808,7 @@ data Trigger
 
 -- | Date-Time Created. 3.8.7.1.
 data Created = Created
-    { createdValue :: DateTime
+    { createdValue :: UTCTime
     , createdOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 

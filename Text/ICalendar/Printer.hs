@@ -354,8 +354,8 @@ instance IsProperty Class where
 
 instance IsProperty Created where
     printProperty Created {..} = ln $ do
-        prop "CREATED" $ toParam createdOther <> toParam createdValue
-        printValue createdValue
+        prop "CREATED" createdOther
+        printUTCTime createdValue
 
 instance IsProperty Description  where
     printProperty Description {..} = ln $ do

@@ -60,7 +60,7 @@ parseVEvent mmethod (Component _ "VEVENT" _) = do
         throwError "A VEVENT in a VCALENDAR without a METHOD requires a \
                    \DTSTART property."
     veClass <- optLine1 "CLASS" parseClass
-    veCreated <- optLine1 "CREATED" $ parseSimpleDateTime ((Just .) . Created)
+    veCreated <- optLine1 "CREATED" (Just .: parseCreated)
     veDescription <- optLine1 "DESCRIPTION" .
                     parseAltRepLang $ (((Just .) .) .) . Description
     veGeo <- optLine1 "GEO" (Just .: parseGeo)
@@ -104,8 +104,7 @@ parseVTodo (Component _ "VTODO" _) = do
     vtClass <- optLine1 "CLASS" parseClass
     vtCompleted <- optLine1 "COMPLETED" . parseSimpleDateTime $
                 (Just .) . Completed
-    vtCreated <- optLine1 "CREATED" . parseSimpleDateTime $
-                (Just .) . Created
+    vtCreated <- optLine1 "CREATED" (Just .: parseCreated)
     vtDTStart <- optLine1 "DTSTART" $
                 Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
     vtDescription <- optLine1 "DESCRIPTION" .
@@ -219,8 +218,7 @@ parseVJournal (Component _ "VJOURNAL" _) = do
     vjDTStamp <- reqLine1 "DTSTAMP" $ parseSimpleUTC DTStamp
     vjUID <- reqLine1 "UID" $ parseSimple UID
     vjClass <- optLine1 "CLASS" parseClass
-    vjCreated <- optLine1 "CREATED" . parseSimpleDateTime $
-                (Just .) . Created
+    vjCreated <- optLine1 "CREATED" (Just .: parseCreated)
     vjDTStart <- optLine1 "DTSTART" $
                 Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
     vjDescription <- optLineN "DESCRIPTION" $ parseAltRepLang Description
