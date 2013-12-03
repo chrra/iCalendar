@@ -191,7 +191,14 @@ parseAltRepLang' _ _ x = throwError $ "parseAltRepLang': " ++ show x
 -- specification, and 'OtherParams'.
 parseAltRepLang :: (Text -> Maybe URI.URI -> Maybe Language -> OtherParams -> a)
                 -> Content -> ContentParser a
-parseAltRepLang = parseAltRepLang' valueOnlyOne
+parseAltRepLang = parseAltRepLang' lenientTextOnlyOne
+  where lenientTextOnlyOne :: [Text] -> ContentParser Text
+        lenientTextOnlyOne [x] = return x
+        lenientTextOnlyOne [] = throwError "Must have one value, not zero."
+        lenientTextOnlyOne xs = do
+            tell ["Illegal comma in value that only allows one TEXT, assuming\
+                  \ literal comma was intended."]
+            return $ T.intercalate "," xs
 
 -- | Parse something '[Text]' with alternative representations, language
 -- specification, and 'OtherParams'.

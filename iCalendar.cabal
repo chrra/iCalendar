@@ -1,5 +1,5 @@
 name:                iCalendar
-version:             0.3
+version:             0.3.0.1
 synopsis:            iCalendar data types, parser, and printer.
 description:         Data definitions, parsing and printing of the iCalendar
                      format (RFC5545).
