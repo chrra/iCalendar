@@ -4,6 +4,7 @@
 {-# LANGUAGE TupleSections     #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
+    , printICalendar
     , printICal
     ) where
 
@@ -74,9 +75,15 @@ instance Default EncodingFunctions where
 
 type ContentPrinter = RWS EncodingFunctions Builder Int
 
+-- | Print a VCalendar object to a ByteString.
+printICalendar :: EncodingFunctions -> VCalendar -> ByteString
+printICalendar r v = (\(_, _, x) -> Bu.toLazyByteString x) $
+                     runRWS (printVCalendar v) r 0
+
+-- | Deprecated synonym for printICalendar
 printICal :: EncodingFunctions -> VCalendar -> ByteString
-printICal r v = (\(_, _, x) -> Bu.toLazyByteString x) $
-                runRWS (printVCalendar v) r 0
+printICal = printICalendar
+{-# DEPRECATED printICal "Use printICalendar instead" #-}
 
 -- {{{ Component printers
 

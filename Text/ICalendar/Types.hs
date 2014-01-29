@@ -546,6 +546,7 @@ data UTCPeriod
       deriving (Show, Eq, Ord, Typeable)
 
 -- | Free/Busy Time Type. 3.2.9.
+--
 -- Unrecognized FBTypeX MUST be treated as Busy.
 data FBType
     = Free
@@ -611,6 +612,7 @@ data Attendee = Attendee
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Calendar User Type. 3.2.3.
+--
 -- Unrecognized CUTypeX MUST be treated as Unknown.
 data CUType
     = Individual
@@ -659,6 +661,7 @@ data Contact = Contact
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Organizer. 3.8.4.3.
+--
 -- TODO: CAL-ADDRESS-related properties.
 data Organizer = Organizer
     { organizerValue    :: CalAddress
@@ -694,6 +697,7 @@ data RelatedTo = RelatedTo
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Relationship Type. 3.2.15.
+--
 -- Unrecognized RelationshipTypeX values MUST be treated as Parent.
 data RelationshipType = Parent | Child | Sibling | RelationshipTypeX (CI Text)
                         deriving (Show, Eq, Ord, Typeable)

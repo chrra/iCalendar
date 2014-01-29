@@ -37,6 +37,7 @@ import           Text.Parsec.Prim       hiding ((<|>))
 
 import Text.ICalendar.Types
 
+-- | Content lines, separated into components. 3.1.
 data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
              | Component P.SourcePos (CI Text) [Content]
                deriving (Show, Eq, Ord)
@@ -143,7 +144,6 @@ parseURI :: String -> ContentParser URI.URI
 parseURI s = case URI.parseURI s of
                   Just x -> return x
                   Nothing -> throwError $  "Invalid URI: " ++ show s
-
 
 -- | Convert a 'DateTime' to 'UTCTime', giving an appropriate error.
 mustBeUTC :: DateTime -> ContentParser UTCTime

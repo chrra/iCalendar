@@ -3,7 +3,9 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 module Text.ICalendar.Parser
-    ( parseICal
+    ( parseICalendar
+    , parseICalendarFile
+    , parseICal
     , parseICalFile
     , DecodingFunctions(..)
     ) where
@@ -29,12 +31,13 @@ import Text.ICalendar.Types
 
 
 -- | Parse a ByteString containing iCalendar data.
+--
 -- Returns either an error, or a tuple of the result and a list of warnings.
-parseICal :: DecodingFunctions
-          -> FilePath
-          -> ByteString
-          -> Either String ([VCalendar], [String])
-parseICal s f bs = do
+parseICalendar :: DecodingFunctions
+               -> FilePath -- ^ Used in error messages.
+               -> ByteString
+               -> Either String ([VCalendar], [String])
+parseICalendar s f bs = do
     a <- either (Left . show) Right $ runParser parseToContent s f bs
     when (null a) $ throwError "Missing content."
     let xs = map (runCP s . parseVCalendar) a
@@ -44,11 +47,26 @@ parseICal s f bs = do
                   Right y -> Right (y:x, w <> ws)
     return (x, w)
 
+-- | Deprecated synonym for parseICalendar
+parseICal :: DecodingFunctions
+          -> FilePath
+          -> ByteString
+          -> Either String ([VCalendar], [String])
+parseICal = parseICalendar
+{-# DEPRECATED parseICal "Use parseICalendar instead" #-}
+
 -- | Parse an iCalendar file.
+parseICalendarFile :: DecodingFunctions
+                   -> FilePath
+                   -> IO (Either String ([VCalendar], [String]))
+parseICalendarFile s f = parseICal s f <$> B.readFile f
+
+-- | Deprecated synonym for parseICalendarFile
 parseICalFile :: DecodingFunctions
               -> FilePath
               -> IO (Either String ([VCalendar], [String]))
-parseICalFile s f = parseICal s f <$> B.readFile f
+parseICalFile = parseICalendarFile
+{-# DEPRECATED parseICalFile "Use parseICalendarFile instead" #-}
 
 runCP :: DecodingFunctions -> ContentParser a
       -> (Either String a, (SourcePos, [Content]), [String])
