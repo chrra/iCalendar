@@ -632,7 +632,7 @@ instance ToParam FBType where
     toParam (FBTypeX x)     = [("FBTYPE", [(Optional, CI.original x)])]
 
 instance ToParam MIMEType where
-    toParam m = [("FMTTYPE", [(NoQuotes, T.pack $ showMIMEType m)])]
+    toParam m = [("FMTTYPE", [(NoQuotes, T.fromStrict $ showMIMEType m)])]
 
 instance ToParam Attachment where
     toParam UriAttachment {..} = toParam attachFmtType <>
