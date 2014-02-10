@@ -87,7 +87,7 @@ parseCUType "UNKNOWN" = Unknown
 parseCUType x = CUTypeX x
 
 parseMime :: Text -> ContentParser MIMEType
-parseMime t = let m = mimeType .: parseMIMEType $ T.unpack t
+parseMime t = let m = mimeType .: parseMIMEType $ T.toStrict t
                in maybe (throwError $ "parseMime: " ++ show t) return m
 
 -- | Parse Duration. 3.3.6
