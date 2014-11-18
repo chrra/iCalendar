@@ -1,5 +1,5 @@
 name:                iCalendar
-version:             0.4.0.2
+version:             0.4.0.1
 synopsis:            iCalendar data types, parser, and printer.
 description:         Data definitions, parsing and printing of the iCalendar
                      format (RFC5545).
@@ -21,7 +21,7 @@ source-repository head
   location:          git://github.com/tingtun/iCalendar.git
 flag network-uri
    description: Get Network.URI from the network-uri package
-   default: False
+   default: True
 
 library
   exposed-modules:     Text.ICalendar.Types
