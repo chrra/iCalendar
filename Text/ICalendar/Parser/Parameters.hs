@@ -193,7 +193,7 @@ parseUTCPeriod bs = do
     when (B.null x) . throwError $ "Invalid UTCperiod: " ++ show bs
     dateTime <- mustBeUTC =<< parseDateTime Nothing dateTime'
     case B.head x of
-         z | z `elem` "+-P" -> UTCPeriodDuration dateTime
+         z | z `elem` ("+-P"::String) -> UTCPeriodDuration dateTime
                                     <$> parseDuration "period" x
          _ -> UTCPeriodDates dateTime <$> (mustBeUTC =<< parseDateTime Nothing x)
 
@@ -203,6 +203,6 @@ parsePeriod tzid bs = do
     when (B.null x) . throwError $ "Invalid period: " ++ show bs
     dateTime <- parseDateTime tzid dateTime'
     case B.head x of
-         z | z `elem` "+-P" -> PeriodDuration dateTime
+         z | z `elem` ("+-P"::String) -> PeriodDuration dateTime
                                     <$> parseDuration "period" x
          _ -> PeriodDates dateTime <$> parseDateTime tzid x

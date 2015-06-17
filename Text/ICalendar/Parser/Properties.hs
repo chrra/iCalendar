@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE FlexibleContexts  #-}
 module Text.ICalendar.Parser.Properties where
 
 import           Control.Applicative
@@ -379,7 +380,7 @@ parseUTCOffset (ContentLine _ n o bs)
         (t1:t2:m1:m2:sec) = map digitToInt rest
         (s1:s2:_) = sec
         sign x = if s == '-' then negate x else x
-    when (length str < 5 || any (not . isDigit) rest || s `notElem` "+-"
+    when (length str < 5 || any (not . isDigit) rest || s `notElem` ['+','-']
                          || length sec `notElem` [0,2]) .
         throwError $ "parseUTCOffset: " ++ str
     return . UTCOffset (sign $ ((t1 * 10 + t2) * 60 + (m1 * 10 + m2)) * 60 +

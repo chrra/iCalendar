@@ -75,7 +75,7 @@ char c = scan True f <?> show c
 
 isControl', isSafe, isValue, isQSafe, isName :: Char -> Bool
 isControl' c = c /= '\t' && isControl c
-isSafe c = not (isControl' c) && c `notElem` "\";:,"
+isSafe c = not (isControl' c) && c `notElem` ("\";:,"::String)
 isValue c = let n = fromEnum c in n == 32 || n == 9 || (n >= 0x21 && n /= 0x7F)
 isQSafe c = isValue c && c /= '"'
 isName c = isAsciiUpper c || isAsciiLower c || isDigit c || c == '-'

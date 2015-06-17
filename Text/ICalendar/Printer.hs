@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE CPP #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICalendar
@@ -32,7 +33,13 @@ import qualified Data.Time                    as Time
 import qualified Data.Version                 as Ver
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM_)
-import qualified System.Locale                as L
+
+#if MIN_VERSION_time(1,5,0)
+import Data.Time (defaultTimeLocale)
+#else
+import System.Locale (defaultTimeLocale)
+#endif
+
 import           Text.Printf                  (printf)
 
 import           Codec.MIME.Type             (MIMEType, showMIMEType)
@@ -967,6 +974,6 @@ line :: ByteString -> ContentPrinter ()
 line b = tell (Bu.lazyByteString b) >> newline
 
 formatTime :: FormatTime t => String -> t -> String
-formatTime = Time.formatTime L.defaultTimeLocale
+formatTime = Time.formatTime defaultTimeLocale
 
 -- }}}

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 module Text.ICalendar.Parser.Common where
 
 import           Control.Applicative
@@ -29,7 +30,12 @@ import qualified Data.Time                    as Time
 import           Data.Traversable             (mapM)
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
-import qualified System.Locale                as L
+
+#if MIN_VERSION_time(1,5,0)
+import Data.Time (defaultTimeLocale)
+#else
+import System.Locale (defaultTimeLocale)
+#endif
 
 import qualified Text.Parsec            as P
 import           Text.Parsec.Combinator hiding (optional)
@@ -74,7 +80,7 @@ parseText' bs = do c <- asks dfBS2Text
                                        '\\' -> nxt '\\'
                                        ';' -> nxt ';'
                                        ',' -> nxt ','
-                                       z | z `elem` "nN" -> nxt '\n'
+                                       z | z `elem` ['n','N'] -> nxt '\n'
                                        _ -> fail $ "unexpected " ++ show x
                        y -> nxt y
         -- isTSafe + 0x22, 0x3A, and 0x5C is pattern matched against.
@@ -115,12 +121,12 @@ parseDateTime mTZ bs = do
 
 -- | Parse a string to a Day. 3.3.4
 parseDateStr :: String -> Maybe (Day, String)
-parseDateStr = lastToMaybe . Time.readsTime L.defaultTimeLocale "%Y%m%d"
+parseDateStr = lastToMaybe . Time.readSTime True defaultTimeLocale "%Y%m%d"
 
 -- | Parse a string to a TimeOfDay, and a bool if it's in UTC.
 parseTimeStr :: String -> Maybe (TimeOfDay, Bool)
 parseTimeStr s = do
-    (t, r) <- lastToMaybe (Time.readsTime L.defaultTimeLocale "%H%M%S" s)
+    (t, r) <- lastToMaybe (Time.readSTime True defaultTimeLocale "%H%M%S" s)
     case r of
          "Z" -> return (t, True)
          "" -> return (t, False)
@@ -196,8 +202,7 @@ parseAltRepLang = parseAltRepLang' lenientTextOnlyOne
         lenientTextOnlyOne [x] = return x
         lenientTextOnlyOne [] = throwError "Must have one value, not zero."
         lenientTextOnlyOne xs = do
-            tell ["Illegal comma in value that only allows one TEXT, assuming\
-                  \ literal comma was intended."]
+            tell ["Illegal comma in value that only allows one TEXT, assuming literal comma was intended."]
             return $ T.intercalate "," xs
 
 -- | Parse something '[Text]' with alternative representations, language
