@@ -25,7 +25,7 @@ enc = Enc.encodeUtf8
 foldResult :: [Content]
 foldResult = [ContentLine 1 "DESCRIPTION" [] "This is a long description that exists on a long line."]
 
-fold1, fold2, fold3, fold4, fold5 :: ByteString
+fold1, fold2, fold3, fold4, fold5, fold6, fold7 :: ByteString
 fold1 = "DESCRIPTION:This is a long description that exists on a long line."
 
 fold2 = "DESCRIPTION:This is a lo\r\n\
@@ -43,6 +43,13 @@ fold4 = "DESCRIPTION:This is a lo\r\
 fold5 = "DESCRIPTION:This is a lo\r\n\
 \\tng description\r\n\
 \\t that exists on a long line."
+
+fold6 = "DESCRIPTION:This is a lo\r\n\
+\ ng description\r\n\
+\ \r\n\
+\  that exists on a long line."
+
+fold7 = BL.intercalate "\r\n " . map (BL.pack . (:[])) $ BL.unpack fold1
 
 compResult :: [Content]
 compResult = [Component 1 "VCALENDAR" [ContentLine 2 "TEST" [] "VALUE"]]
@@ -128,6 +135,13 @@ spec = do
                 p fold4 `shouldBe` foldResult
             it "accepts CRLF HTAB folds" $
                 p fold5 `shouldBe` foldResult
+            it "accepts two folds with nothing between them" $
+                p fold6 `shouldBe` foldResult
+            it "accepts pathological fold" $
+                p fold7 `shouldBe` foldResult
+            it "accepts a line fold in the middle of a UTF8 sequence" $
+                p "A;X=\"\195\r\n\t\152\":Z" `shouldBe`
+                    [ContentLine 1 "A" [("X", ["Ø"])] "Z"]
 
         context "components" $ do
             it "groups components correctly" $
