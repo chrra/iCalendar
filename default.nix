@@ -13,7 +13,7 @@ cabal.mkDerivation (self: {
     networkUri parsec text time
   ];
   meta = {
-    homepage = "http://github.com/tingtun/iCalendar";
+    homepage = "http://github.com/chrra/iCalendar";
     description = "iCalendar data types, parser, and printer";
     license = self.stdenv.lib.licenses.bsd3;
     platforms = self.ghc.meta.platforms;

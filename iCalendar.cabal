@@ -3,12 +3,12 @@ version:             0.4.0.3
 synopsis:            iCalendar data types, parser, and printer.
 description:         Data definitions, parsing and printing of the iCalendar
                      format (RFC5545).
-homepage:            http://github.com/tingtun/iCalendar
-bug-reports:         http://github.com/tingtun/iCalendar/issues
+homepage:            http://github.com/chrra/iCalendar
+bug-reports:         http://github.com/chrra/iCalendar/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Christian Rødli Amble
-maintainer:          cra+code@cra.no
+maintainer:          cra@cra.no
 copyright:           (c) Tingtun
 stability:           experimental
 category:            Text
@@ -18,7 +18,8 @@ cabal-version:       >=1.8
 
 source-repository head
   type:              git
-  location:          git://github.com/tingtun/iCalendar.git
+  location:          git://github.com/chrra/iCalendar.git
+
 flag network-uri
    description: Get Network.URI from the network-uri package
    default: True
