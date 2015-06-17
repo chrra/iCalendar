@@ -1,8 +1,8 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE CPP #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICalendar
@@ -35,17 +35,17 @@ import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM_)
 
 #if MIN_VERSION_time(1,5,0)
-import Data.Time (defaultTimeLocale)
+import           Data.Time                    (defaultTimeLocale)
 #else
-import System.Locale (defaultTimeLocale)
+import           System.Locale                (defaultTimeLocale)
 #endif
 
 import           Text.Printf                  (printf)
 
-import           Codec.MIME.Type             (MIMEType, showMIMEType)
-import qualified Data.ByteString.Base64.Lazy as B64
+import           Codec.MIME.Type              (MIMEType, showMIMEType)
+import qualified Data.ByteString.Base64.Lazy  as B64
 
-import Text.ICalendar.Types
+import           Text.ICalendar.Types
 
 
 -- | Functions for encoding into bytestring builders.

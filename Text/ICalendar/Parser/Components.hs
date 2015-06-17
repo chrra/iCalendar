@@ -3,20 +3,20 @@
 module Text.ICalendar.Parser.Components where
 
 import           Control.Applicative
-import           Control.Arrow        ((&&&))
-import           Control.Monad.Error  hiding (mapM)
-import           Control.Monad.RWS    (MonadState (get), tell)
-import qualified Data.CaseInsensitive as CI
-import qualified Data.Foldable        as F
-import           Data.List            (partition)
-import qualified Data.Map             as M
+import           Control.Arrow                    ((&&&))
+import           Control.Monad.Error              hiding (mapM)
+import           Control.Monad.RWS                (MonadState (get), tell)
+import qualified Data.CaseInsensitive             as CI
+import qualified Data.Foldable                    as F
+import           Data.List                        (partition)
+import qualified Data.Map                         as M
 import           Data.Maybe
-import           Data.Set             (Set)
-import qualified Data.Set             as S
+import           Data.Set                         (Set)
+import qualified Data.Set                         as S
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Properties
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Properties
+import           Text.ICalendar.Types
 
 -- | Parse a VCALENDAR component. 3.4
 parseVCalendar :: Content -> ContentParser VCalendar

@@ -10,21 +10,20 @@ module Text.ICalendar.Parser
 
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.Error
-import           Control.Monad.RWS          (runRWS)
-import           Data.ByteString.Lazy       (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B
+import           Control.Monad.Except
+import           Control.Monad.RWS                (runRWS)
+import           Data.ByteString.Lazy             (ByteString)
+import qualified Data.ByteString.Lazy.Char8       as B
 import           Data.Monoid
 import           Prelude
 
-import Text.Parsec.ByteString.Lazy ()
-import Text.Parsec.Prim            hiding (many, (<|>))
-import Text.Parsec.Text.Lazy       ()
+import           Text.Parsec.ByteString.Lazy      ()
+import           Text.Parsec.Text.Lazy            ()
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Components
-import Text.ICalendar.Parser.Content
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Components
+import           Text.ICalendar.Parser.Content
+import           Text.ICalendar.Types
 
 
 -- | Parse a ByteString containing iCalendar data.
@@ -51,4 +50,4 @@ parseICalendarFile s f = parseICalendar s <$> B.readFile f
 
 runCP :: DecodingFunctions -> ContentParser a
       -> (Either String a, (Int, [Content]), [String])
-runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runErrorT
+runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runExceptT

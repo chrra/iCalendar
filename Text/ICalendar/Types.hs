@@ -19,7 +19,7 @@ import           Data.Typeable              (Typeable)
 import           Data.Version               (Version (..), showVersion)
 import           Network.URI                (URI)
 
-import Paths_iCalendar (version)
+import           Paths_iCalendar            (version)
 
 -- | Language.
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.

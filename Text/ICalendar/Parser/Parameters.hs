@@ -2,26 +2,26 @@
 module Text.ICalendar.Parser.Parameters where
 
 import           Control.Applicative
-import           Control.Monad.Error
-import           Control.Monad.RWS          (MonadWriter (tell))
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B
-import           Data.CaseInsensitive       (CI)
+import           Control.Monad.Except
+import           Control.Monad.RWS            (MonadWriter (tell))
+import           Data.ByteString.Lazy.Char8   (ByteString)
+import qualified Data.ByteString.Lazy.Char8   as B
+import           Data.CaseInsensitive         (CI)
 import           Data.Char
 import           Data.Default
 import           Data.Maybe
-import           Data.Text.Lazy             (Text)
-import qualified Data.Text.Lazy             as T
+import           Data.Text.Lazy               (Text)
+import qualified Data.Text.Lazy               as T
 
-import           Codec.MIME.Parse       (parseMIMEType)
-import           Codec.MIME.Type        (MIMEType, mimeType)
-import qualified Text.Parsec            as P
-import           Text.Parsec.Combinator hiding (optional)
+import           Codec.MIME.Parse             (parseMIMEType)
+import           Codec.MIME.Type              (MIMEType, mimeType)
+import qualified Text.Parsec                  as P
+import           Text.Parsec.Combinator       hiding (optional)
 import           Text.Parsec.Perm
-import           Text.Parsec.Prim       hiding ((<|>))
+import           Text.Parsec.Prim             hiding ((<|>))
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Types
 
 parseAlarmTriggerRelationship :: CI Text
                               -> ContentParser AlarmTriggerRelationship

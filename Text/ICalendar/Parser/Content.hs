@@ -16,13 +16,13 @@ import           Data.Char
 import           Data.Monoid
 import           Data.Text.Lazy               (Text)
 
-import qualified Text.Parsec                 as P
-import           Text.Parsec.ByteString.Lazy ()
-import           Text.Parsec.Combinator      hiding (optional)
-import           Text.Parsec.Prim            hiding (many, (<|>))
-import           Text.Parsec.Text.Lazy       ()
+import qualified Text.Parsec                  as P
+import           Text.Parsec.ByteString.Lazy  ()
+import           Text.Parsec.Combinator       hiding (optional)
+import           Text.Parsec.Prim             hiding (many, (<|>))
+import           Text.Parsec.Text.Lazy        ()
 
-import Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Common
 
 parseToContent :: DecodingFunctions
                -> ByteString

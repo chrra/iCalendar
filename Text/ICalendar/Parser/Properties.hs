@@ -1,32 +1,32 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE FlexibleContexts  #-}
 module Text.ICalendar.Parser.Properties where
 
 import           Control.Applicative
-import           Control.Monad.Error          hiding (mapM)
-import           Control.Monad.RWS            (asks)
-import qualified Data.ByteString.Base64.Lazy  as B64
-import qualified Data.ByteString.Lazy.Char8   as B
-import           Data.CaseInsensitive         (CI)
-import qualified Data.CaseInsensitive         as CI
+import           Control.Monad.Error              hiding (mapM)
+import           Control.Monad.RWS                (asks)
+import qualified Data.ByteString.Base64.Lazy      as B64
+import qualified Data.ByteString.Lazy.Char8       as B
+import           Data.CaseInsensitive             (CI)
+import qualified Data.CaseInsensitive             as CI
 import           Data.Char
 import           Data.Default
 import           Data.Maybe
-import qualified Data.Set                     as S
-import           Data.Text.Lazy               (Text)
-import qualified Data.Text.Lazy               as T
-import           Data.Traversable             (mapM)
-import qualified Data.Version                 as Ver
-import           Prelude                      hiding (mapM)
-import           Text.ParserCombinators.ReadP (readP_to_S)
+import qualified Data.Set                         as S
+import           Data.Text.Lazy                   (Text)
+import qualified Data.Text.Lazy                   as T
+import           Data.Traversable                 (mapM)
+import qualified Data.Version                     as Ver
+import           Prelude                          hiding (mapM)
+import           Text.ParserCombinators.ReadP     (readP_to_S)
 
-import Text.Parsec.Prim hiding ((<|>))
+import           Text.Parsec.Prim                 hiding ((<|>))
 
-import Text.ICalendar.Parser.Common
-import Text.ICalendar.Parser.Parameters
-import Text.ICalendar.Types
+import           Text.ICalendar.Parser.Common
+import           Text.ICalendar.Parser.Parameters
+import           Text.ICalendar.Types
 
 parseFreeBusy :: Content -> ContentParser FreeBusy
 parseFreeBusy (ContentLine _ "FREEBUSY" o bs) = do
