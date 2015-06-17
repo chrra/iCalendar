@@ -25,17 +25,12 @@ import           Data.Text.Lazy               (Text)
 import qualified Data.Text.Lazy               as T
 import qualified Data.Text.Lazy.Encoding      as TE
 import           Data.Time                    (Day, LocalTime (LocalTime),
-                                               TimeOfDay (), UTCTime (UTCTime))
+                                               TimeOfDay (), UTCTime (UTCTime),
+                                               defaultTimeLocale)
 import qualified Data.Time                    as Time
 import           Data.Traversable             (mapM)
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
-
-#if MIN_VERSION_time(1,5,0)
-import Data.Time (defaultTimeLocale)
-#else
-import System.Locale (defaultTimeLocale)
-#endif
 
 import qualified Text.Parsec            as P
 import           Text.Parsec.Combinator hiding (optional)
@@ -44,8 +39,8 @@ import           Text.Parsec.Prim       hiding ((<|>))
 import Text.ICalendar.Types
 
 -- | Content lines, separated into components. 3.1.
-data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
-             | Component P.SourcePos (CI Text) [Content]
+data Content = ContentLine Int (CI Text) [(CI Text, [Text])] ByteString
+             | Component Int (CI Text) [Content]
                deriving (Show, Eq, Ord)
 
 type TextParser = P.Parsec ByteString DecodingFunctions
@@ -53,7 +48,7 @@ type TextParser = P.Parsec ByteString DecodingFunctions
 type ContentParser = ErrorT String -- Fatal errors.
                             (RWS DecodingFunctions
                                  [String] -- Warnings.
-                                 (P.SourcePos, [Content]))
+                                 (Int, [Content]))
 
 -- | Functions for decoding 'ByteString's into 'Text'.
 data DecodingFunctions = DecodingFunctions
@@ -315,7 +310,7 @@ down (Component p _ x) = down' (p, x)
 down x@(ContentLine p _ _ _) = down' (p, [x])
 
 -- | Set the parser context.
-down' :: (P.SourcePos, [Content]) -> ContentParser a -> ContentParser a
+down' :: (Int, [Content]) -> ContentParser a -> ContentParser a
 down' x m = get >>= \old -> put x >> m <* put old
 
 -- | Many optional components named ...

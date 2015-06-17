@@ -20,7 +20,6 @@ import           Data.Monoid
 import           Prelude
 
 import Text.Parsec.ByteString.Lazy ()
-import Text.Parsec.Pos
 import Text.Parsec.Prim            hiding (many, (<|>))
 import Text.Parsec.Text.Lazy       ()
 
@@ -34,22 +33,20 @@ import Text.ICalendar.Types
 --
 -- Returns either an error, or a tuple of the result and a list of warnings.
 parseICalendar :: DecodingFunctions
-               -> FilePath -- ^ Used in error messages.
                -> ByteString
                -> Either String ([VCalendar], [String])
-parseICalendar s f bs = do
-    a <- either (Left . show) Right $ runParser parseToContent s f bs
+parseICalendar s bs = do
+    a <- parseToContent s bs
     when (null a) $ throwError "Missing content."
     let xs = map (runCP s . parseVCalendar) a
     (x, w) <- ((flip.).) flip foldM ([], []) xs $ \(x, ws) (g, (pos, _), w) ->
              case g of
-                  Left e -> Left $ show pos ++ ": " ++ e
+                  Left e -> Left $ "Line " ++ show pos ++ ": " ++ e
                   Right y -> Right (y:x, w <> ws)
     return (x, w)
 
 -- | Deprecated synonym for parseICalendar
 parseICal :: DecodingFunctions
-          -> FilePath
           -> ByteString
           -> Either String ([VCalendar], [String])
 parseICal = parseICalendar
@@ -59,7 +56,7 @@ parseICal = parseICalendar
 parseICalendarFile :: DecodingFunctions
                    -> FilePath
                    -> IO (Either String ([VCalendar], [String]))
-parseICalendarFile s f = parseICal s f <$> B.readFile f
+parseICalendarFile s f = parseICal s <$> B.readFile f
 
 -- | Deprecated synonym for parseICalendarFile
 parseICalFile :: DecodingFunctions
@@ -69,5 +66,5 @@ parseICalFile = parseICalendarFile
 {-# DEPRECATED parseICalFile "Use parseICalendarFile instead" #-}
 
 runCP :: DecodingFunctions -> ContentParser a
-      -> (Either String a, (SourcePos, [Content]), [String])
+      -> (Either String a, (Int, [Content]), [String])
 runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runErrorT

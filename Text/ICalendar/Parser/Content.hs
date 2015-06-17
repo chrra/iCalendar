@@ -1,7 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Text.ICalendar.Parser.Content where
+module Text.ICalendar.Parser.Content
+    ( Content(..)
+    , contentParser
+    , parseToContent
+    ) where
 
 import           Control.Applicative
+import           Control.Arrow                (left)
 import           Control.Monad
 import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Lazy.Builder as Bu
@@ -18,10 +23,15 @@ import           Text.Parsec.Text.Lazy       ()
 
 import Text.ICalendar.Parser.Common
 
-parseToContent :: TextParser [Content]
-parseToContent = do content <- sepEndBy1 contentline newline
-                    f <- dfBS2IText <$> getState
-                    return $ componentalize f content
+parseToContent :: DecodingFunctions
+               -> ByteString
+               -> Either String [Content]
+parseToContent df bs = left show $ runParser contentParser df "-" bs
+
+contentParser :: TextParser [Content]
+contentParser = do content <- sepEndBy1 contentline newline
+                   f <- dfBS2IText <$> getState
+                   return $ componentalize f content
 
 newline :: TextParser ()
 newline = (char '\r' >> void (optional $ char '\n')) <|> void (char '\n')
@@ -81,7 +91,7 @@ isQSafe c = isValue c && c /= '"'
 isName c = isAsciiUpper c || isAsciiLower c || isDigit c || c == '-'
 
 contentline :: TextParser Content
-contentline = do pos <- getPosition
+contentline = do pos <- P.sourceLine <$> getPosition
                  n <- name
                  ps <- many (char ';' >> param)
                  _ <- char ':'
