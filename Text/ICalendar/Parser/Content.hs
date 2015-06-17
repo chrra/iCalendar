@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Text.ICalendar.Parser.Content
     ( Content(..)
+    , DecodingFunctions(..)
     , contentParser
     , parseToContent
     ) where
