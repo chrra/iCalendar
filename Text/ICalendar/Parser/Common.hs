@@ -1,6 +1,6 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE CPP #-}
 module Text.ICalendar.Parser.Common where
 
 import           Control.Applicative
@@ -32,11 +32,11 @@ import           Data.Traversable             (mapM)
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
 
-import qualified Text.Parsec            as P
-import           Text.Parsec.Combinator hiding (optional)
-import           Text.Parsec.Prim       hiding ((<|>))
+import qualified Text.Parsec                  as P
+import           Text.Parsec.Combinator       hiding (optional)
+import           Text.Parsec.Prim             hiding ((<|>))
 
-import Text.ICalendar.Types
+import           Text.ICalendar.Types
 
 -- | Content lines, separated into components. 3.1.
 data Content = ContentLine Int (CI Text) [(CI Text, [Text])] ByteString

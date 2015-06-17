@@ -5,8 +5,6 @@
 module Text.ICalendar.Parser
     ( parseICalendar
     , parseICalendarFile
-    , parseICal
-    , parseICalFile
     , DecodingFunctions(..)
     ) where
 
@@ -45,25 +43,11 @@ parseICalendar s bs = do
                   Right y -> Right (y:x, w <> ws)
     return (x, w)
 
--- | Deprecated synonym for parseICalendar
-parseICal :: DecodingFunctions
-          -> ByteString
-          -> Either String ([VCalendar], [String])
-parseICal = parseICalendar
-{-# DEPRECATED parseICal "Use parseICalendar instead" #-}
-
 -- | Parse an iCalendar file.
 parseICalendarFile :: DecodingFunctions
                    -> FilePath
                    -> IO (Either String ([VCalendar], [String]))
-parseICalendarFile s f = parseICal s <$> B.readFile f
-
--- | Deprecated synonym for parseICalendarFile
-parseICalFile :: DecodingFunctions
-              -> FilePath
-              -> IO (Either String ([VCalendar], [String]))
-parseICalFile = parseICalendarFile
-{-# DEPRECATED parseICalFile "Use parseICalendarFile instead" #-}
+parseICalendarFile s f = parseICalendar s <$> B.readFile f
 
 runCP :: DecodingFunctions -> ContentParser a
       -> (Either String a, (Int, [Content]), [String])
