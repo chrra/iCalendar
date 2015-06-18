@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -6,6 +7,7 @@ module Text.ICalendar.Parser.Common where
 
 import           Control.Applicative
 import           Control.Arrow                (second)
+import           Control.DeepSeq              (NFData)
 import           Control.Monad.Except         hiding (mapM)
 import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
@@ -30,6 +32,7 @@ import           Data.Time                    (Day, LocalTime (LocalTime),
                                                defaultTimeLocale)
 import qualified Data.Time                    as Time
 import           Data.Traversable             (mapM)
+import           GHC.Generics                 (Generic)
 import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
 
@@ -42,7 +45,9 @@ import           Text.ICalendar.Types
 -- | Content lines, separated into components. 3.1.
 data Content = ContentLine Int (CI Text) [(CI Text, [Text])] ByteString
              | Component Int (CI Text) [Content]
-               deriving (Show, Eq, Ord)
+               deriving (Show, Eq, Ord, Generic)
+
+instance NFData Content
 
 type TextParser = P.Parsec ByteString DecodingFunctions
 
