@@ -3,12 +3,13 @@ module ContentSpec where
 
 import           Data.ByteString.Lazy          (ByteString)
 import qualified Data.ByteString.Lazy          as BL
+import qualified Data.CaseInsensitive          as CI
 import           Data.Default
-import           Data.Text.Lazy                     (Text)
-import qualified Data.Text.Lazy                     as T
-import qualified Data.Text.Lazy.Encoding            as Enc
+import           Data.Monoid                   ((<>))
+import           Data.Text.Lazy                (Text)
+import qualified Data.Text.Lazy                as T
+import qualified Data.Text.Lazy.Encoding       as Enc
 import           Test.Hspec
-import qualified Data.CaseInsensitive as CI
 
 import           Text.ICalendar.Parser.Content
 
@@ -25,7 +26,7 @@ enc = Enc.encodeUtf8
 foldResult :: [Content]
 foldResult = [ContentLine 1 "DESCRIPTION" [] "This is a long description that exists on a long line."]
 
-fold1, fold2, fold3, fold4, fold5, fold6, fold7 :: ByteString
+fold1, fold2, fold3, fold4, fold5, fold6, fold7, fold8 :: ByteString
 fold1 = "DESCRIPTION:This is a long description that exists on a long line."
 
 fold2 = "DESCRIPTION:This is a lo\r\n\
@@ -50,6 +51,20 @@ fold6 = "DESCRIPTION:This is a lo\r\n\
 \  that exists on a long line."
 
 fold7 = BL.intercalate "\r\n " . map (BL.pack . (:[])) $ BL.unpack fold1
+
+fold8Result :: [Content]
+fold8Result = foldResult ++ [ContentLine 4 "A" [] ""]
+
+fold8 = fold2 <> "\r\nA:"
+
+fullFoldResult = [ContentLine 1 "AB" [ ("CD", ["EF", "GH", "IJ"])
+                                      ,("KL", ["MN", "OP", "QR"])
+                                     ] "STUVWXYZ"]
+
+fullFold1, fullFold2 :: ByteString
+fullFold1 = "AB;CD=\"EF\",\"GH\",IJ;KL=MN,OP,\"QR\":STUVWXYZ"
+
+fullFold2 = BL.intercalate "\r\n " . map (BL.pack . (:[])) $ BL.unpack fullFold1
 
 compResult :: [Content]
 compResult = [Component 1 "VCALENDAR" [ContentLine 2 "TEST" [] "VALUE"]]
@@ -93,6 +108,7 @@ spec = do
                 p "A:\rB:" `shouldBe` twoResult
             it "ignores line terminators" $
                 p "A:\r\nB:\r\n" `shouldBe` twoResult
+            -- TODO recheck these two
             it "errors on blank lines between lines" $
                 notP "A:\r\n\r\nB:" `shouldBe` ()
             it "errors on trailing blank lines" $
@@ -139,9 +155,17 @@ spec = do
                 p fold6 `shouldBe` foldResult
             it "accepts pathological fold" $
                 p fold7 `shouldBe` foldResult
+            it "calculates line numbers correctly" $
+                p fold8 `shouldBe` fold8Result
             it "accepts a line fold in the middle of a UTF8 sequence" $
                 p "A;X=\"\195\r\n\t\152\":Z" `shouldBe`
                     [ContentLine 1 "A" [("X", ["Ø"])] "Z"]
+
+
+            it "parses a line with all features" $
+                p fullFold1 `shouldBe` fullFoldResult
+            it "parses a line with all features fully folded" $
+                p fullFold2 `shouldBe` fullFoldResult
 
         context "components" $ do
             it "groups components correctly" $
