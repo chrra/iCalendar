@@ -7,7 +7,6 @@ import qualified Data.CaseInsensitive          as CI
 import           Data.Default
 import           Data.Monoid                   ((<>))
 import           Data.Text.Lazy                (Text)
-import qualified Data.Text.Lazy                as T
 import qualified Data.Text.Lazy.Encoding       as Enc
 import           Test.Hspec
 
@@ -57,6 +56,7 @@ fold8Result = foldResult ++ [ContentLine 4 "A" [] ""]
 
 fold8 = fold2 <> "\r\nA:"
 
+fullFoldResult :: [Content]
 fullFoldResult = [ContentLine 1 "AB" [ ("CD", ["EF", "GH", "IJ"])
                                       ,("KL", ["MN", "OP", "QR"])
                                      ] "STUVWXYZ"]

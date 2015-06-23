@@ -24,19 +24,17 @@ import           Text.Parsec.Prim             hiding ((<|>))
 import           Text.ICalendar.Parser.Common
 import           Text.ICalendar.Types
 
-parseAlarmTriggerRelationship :: CI Text
-                              -> ContentParser AlarmTriggerRelationship
-parseAlarmTriggerRelationship "START" = return Start
-parseAlarmTriggerRelationship "END" = return End
-parseAlarmTriggerRelationship x =
-    throwError $ "parseAlarmTriggerRelationship: " ++ show x
+parseRelated :: CI Text -> ContentParser Related
+parseRelated "START" = return Start
+parseRelated "END"   = return End
+parseRelated x       = throwError $ "parseRelated: " ++ show x
 
 -- | Parse relationship type. 3.2.15
-parseRelationshipType :: CI Text -> RelationshipType
-parseRelationshipType "PARENT"  = Parent
-parseRelationshipType "CHILD"   = Child
-parseRelationshipType "SIBLING" = Sibling
-parseRelationshipType x = RelationshipTypeX x
+parseRelType :: CI Text -> RelType
+parseRelType "PARENT"  = Parent
+parseRelType "CHILD"   = Child
+parseRelType "SIBLING" = Sibling
+parseRelType x         = RelTypeX x
 
 -- | Parse bool. 3.3.2
 parseBool :: CI Text -> ContentParser Bool

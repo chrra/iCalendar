@@ -58,7 +58,7 @@ parseTrigger (ContentLine _ "TRIGGER" o bs) = do
     case value of
          "DURATION" -> do
             rel <- maybe (return def)
-                         (parseAlarmTriggerRelationship . CI.mk
+                         (parseRelated . CI.mk
                                <=< paramOnlyOne) $ lookup "RELATED" o
             let o' = filter (\(x,_) -> x /= "VALUE" && x /= "RELATED") o
             val <- parseDuration "TRIGGER" bs
@@ -74,7 +74,7 @@ parseTrigger x = throwError $ "parseTrigger: " ++ show x
 parseRelatedTo :: Content -> ContentParser RelatedTo
 parseRelatedTo (ContentLine _ "RELATED-TO" o bs) = do
     val <- valueOnlyOne =<< parseText bs
-    typ <- maybe (return def) (parseRelationshipType . CI.mk .: paramOnlyOne) $
+    typ <- maybe (return def) (parseRelType . CI.mk .: paramOnlyOne) $
                 lookup "RELTYPE" o
     return $ RelatedTo val typ (toO $ filter (\(x,_) -> x /= "RELTYPE") o)
 parseRelatedTo x = throwError $ "parseRelatedTo: " ++ show x

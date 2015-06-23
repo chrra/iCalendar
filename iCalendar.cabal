@@ -25,11 +25,23 @@ flag network-uri
    default: True
 
 library
-  exposed-modules:     Text.ICalendar.Types
+  exposed-modules:     Text.ICalendar
                      , Text.ICalendar.Parser
                      , Text.ICalendar.Parser.Content
                      , Text.ICalendar.Printer
-                     , Text.ICalendar
+                     , Text.ICalendar.Types
+                     , Text.ICalendar.Types.Components
+                     , Text.ICalendar.Types.Parameters
+                     , Text.ICalendar.Types.Properties.Alarm
+                     , Text.ICalendar.Types.Properties.Calendar
+                     , Text.ICalendar.Types.Properties.ChangeManagement
+                     , Text.ICalendar.Types.Properties.DateTime
+                     , Text.ICalendar.Types.Properties.Descriptive
+                     , Text.ICalendar.Types.Properties.Misc
+                     , Text.ICalendar.Types.Properties.Recurrence
+                     , Text.ICalendar.Types.Properties.Relationship
+                     , Text.ICalendar.Types.Properties.TimeZone
+                     , Text.ICalendar.Types.Values
   other-modules:       Text.ICalendar.Parser.Common
                      , Text.ICalendar.Parser.Components
                      , Text.ICalendar.Parser.Parameters

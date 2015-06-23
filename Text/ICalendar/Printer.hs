@@ -6,7 +6,6 @@
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICalendar
-    , printICal
     ) where
 
 import           Control.Applicative
@@ -63,15 +62,6 @@ utf8Len c | o < 0x80  = 1
           | otherwise      = 6
   where o = ord c
 
-newtype AltRep = AltRep URI.URI
-newtype CN = CN Text
-newtype Dir = Dir URI.URI
-newtype Member = Member (Set URI.URI)
-newtype DelTo = DelTo (Set URI.URI)
-newtype DelFrom = DelFrom (Set URI.URI)
-newtype RSVP = RSVP Bool
-newtype SentBy = SentBy CalAddress
-
 data Quoting = NeedQuotes | Optional | NoQuotes
                deriving (Eq, Ord, Show)
 
@@ -86,11 +76,6 @@ type ContentPrinter = RWS EncodingFunctions Builder Int
 printICalendar :: EncodingFunctions -> VCalendar -> ByteString
 printICalendar r v = (\(_, _, x) -> Bu.toLazyByteString x) $
                      runRWS (printVCalendar v) r 0
-
--- | Deprecated synonym for printICalendar
-printICal :: EncodingFunctions -> VCalendar -> ByteString
-printICal = printICalendar
-{-# DEPRECATED printICal "Use printICalendar instead" #-}
 
 -- {{{ Component printers
 
@@ -682,28 +667,29 @@ instance ToParam PartStat where
     toParam InProcess           = [("PARTSTAT", [(NoQuotes, "IN-PROCESS")])]
     toParam (PartStatX x)       = [("PARTSTAT", [(Optional, CI.original x)])]
 
-instance ToParam RelationshipType where
-    toParam x | x == def          = []
-    toParam Parent                = [("RELTYPE", [(NoQuotes, "PARENT")])]
-    toParam Child                 = [("RELTYPE", [(NoQuotes, "CHILD")])]
-    toParam Sibling               = [("RELTYPE", [(NoQuotes, "SIBLING")])]
-    toParam (RelationshipTypeX x) = [("RELTYPE", [(Optional, CI.original x)])]
+instance ToParam RelType where
+    toParam x | x == def = []
+    toParam Parent       = [("RELTYPE", [(NoQuotes, "PARENT")])]
+    toParam Child        = [("RELTYPE", [(NoQuotes, "CHILD")])]
+    toParam Sibling      = [("RELTYPE", [(NoQuotes, "SIBLING")])]
+    toParam (RelTypeX x) = [("RELTYPE", [(Optional, CI.original x)])]
 
 instance ToParam RSVP where
-    toParam (RSVP False) = []
+    toParam x | x == def = []
+    toParam (RSVP False) = [("RSVP", [(NoQuotes, "FALSE")])]
     toParam (RSVP True)  = [("RSVP", [(NoQuotes, "TRUE")])]
 
-instance ToParam DelTo where
-    toParam (DelTo x) | S.null x = []
-                      | otherwise = [( "DELEGATED-TO"
-                                     , (NeedQuotes,) . T.pack . show
-                                                    <$> S.toList x)]
+instance ToParam DelegatedTo where
+    toParam (DelegatedTo x) | S.null x  = []
+                            | otherwise = [( "DELEGATED-TO"
+                                           , (NeedQuotes,) . T.pack . show
+                                                 <$> S.toList x)]
 
-instance ToParam DelFrom where
-    toParam (DelFrom x) | S.null x = []
-                        | otherwise = [( "DELEGATED-FROM"
-                                       , (NeedQuotes,) . T.pack . show
-                                             <$> S.toList x)]
+instance ToParam DelegatedFrom where
+    toParam (DelegatedFrom x) | S.null x = []
+                              | otherwise = [( "DELEGATED-FROM"
+                                             , (NeedQuotes,) . T.pack . show
+                                                   <$> S.toList x)]
 
 instance ToParam Attendee where
     toParam Attendee {..} = toParam attendeeCUType <>
@@ -711,15 +697,15 @@ instance ToParam Attendee where
                             toParam attendeeRole <>
                             toParam attendeePartStat <>
                             toParam (RSVP attendeeRSVP) <>
-                            toParam (DelTo attendeeDelTo) <>
-                            toParam (DelFrom attendeeDelFrom) <>
+                            toParam (DelegatedTo attendeeDelTo) <>
+                            toParam (DelegatedFrom attendeeDelFrom) <>
                             toParam (SentBy <$> attendeeSentBy) <>
                             toParam (CN <$> attendeeCN) <>
                             toParam (Dir <$> attendeeDir) <>
                             toParam attendeeLanguage <>
                             toParam attendeeOther
 
-instance ToParam AlarmTriggerRelationship where
+instance ToParam Related where
     toParam x | x == def = []
     toParam Start        = [("RELATED", [(NoQuotes, "START")])]
     toParam End          = [("RELATED", [(NoQuotes, "END")])]

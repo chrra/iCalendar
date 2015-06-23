@@ -4,41 +4,50 @@
 -- | ICalendar types, based on RFC5545.
 module Text.ICalendar.Types
     ( module Text.ICalendar.Types
+    , module Text.ICalendar.Types.Components
+    , module Text.ICalendar.Types.Parameters
+    , module Text.ICalendar.Types.Properties.Alarm
+    , module Text.ICalendar.Types.Properties.Calendar
+    , module Text.ICalendar.Types.Properties.ChangeManagement
+    , module Text.ICalendar.Types.Properties.DateTime
+    , module Text.ICalendar.Types.Properties.Descriptive
+    , module Text.ICalendar.Types.Properties.Misc
+    , module Text.ICalendar.Types.Properties.Recurrence
+    , module Text.ICalendar.Types.Properties.Relationship
+    , module Text.ICalendar.Types.Properties.TimeZone
+    , module Text.ICalendar.Types.Values
     ) where
 
-import           Codec.MIME.Type            (MIMEType)
-import           Data.ByteString.Lazy.Char8 (ByteString)
-import           Data.CaseInsensitive       (CI)
+import           Codec.MIME.Type                                  (MIMEType)
+import           Data.ByteString.Lazy.Char8                       (ByteString)
+import           Data.CaseInsensitive                             (CI)
 import           Data.Default
-import           Data.Map                   (Map)
-import qualified Data.Map                   as M
+import           Data.Map                                         (Map)
+import qualified Data.Map                                         as M
 import           Data.Monoid
-import           Data.Set                   (Set)
-import           Data.Text.Lazy             (Text, pack)
+import           Data.Set                                         (Set)
+import           Data.Text.Lazy                                   (Text, pack)
 import           Data.Time
-import           Data.Typeable              (Typeable)
-import           Data.Version               (Version (..), showVersion)
-import           GHC.Generics               (Generic)
-import           Network.URI                (URI)
+import           Data.Typeable                                    (Typeable)
+import           Data.Version                                     (Version (..),
+                                                                   showVersion)
+import           GHC.Generics                                     (Generic)
+import           Network.URI                                      (URI)
 
-import           Paths_iCalendar            (version)
+import           Text.ICalendar.Types.Components
+import           Text.ICalendar.Types.Parameters
+import           Text.ICalendar.Types.Properties.Alarm
+import           Text.ICalendar.Types.Properties.Calendar
+import           Text.ICalendar.Types.Properties.ChangeManagement
+import           Text.ICalendar.Types.Properties.DateTime
+import           Text.ICalendar.Types.Properties.Descriptive
+import           Text.ICalendar.Types.Properties.Misc
+import           Text.ICalendar.Types.Properties.Recurrence
+import           Text.ICalendar.Types.Properties.Relationship
+import           Text.ICalendar.Types.Properties.TimeZone
+import           Text.ICalendar.Types.Values
 
--- | Language.
-newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
-                   deriving (Eq, Show, Ord, Typeable, Generic)
-
-type CalAddress = URI
-
--- | One other parameter, either x-param or iana-param.
-data OtherParam = OtherParam (CI Text) [Text]
-                  deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Other parameters, either x-param or other iana-param.
-data OtherParams = OtherParams (Set OtherParam)
-                   deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default OtherParams where
-    def = OtherParams def
+import           Paths_iCalendar                                  (version)
 
 -- | VCalendar component. 3.4.
 data VCalendar = VCalendar
@@ -445,24 +454,6 @@ data Summary = Summary
     , summaryOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Date. 3.3.4
-data Date = Date
-    { dateValue :: Day
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Date-Time value. 3.3.5.
-data DateTime
-    = FloatingDateTime
-    { dateTimeFloating :: LocalTime
-    }
-    | UTCDateTime
-    { dateTimeUTC :: UTCTime
-    }
-    | ZonedDateTime
-    { dateTimeFloating :: LocalTime
-    , dateTimeZone     :: Text
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
 -- | Date-Time End. 3.8.2.2.
 data DTEnd
     = DTEndDateTime
@@ -496,33 +487,6 @@ data DTStart
     , dtStartOther     :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Duration value. 3.3.6.
-data Duration -- TODO(?): Convert to DiffTime?
-    = DurationDate
-    { durSign   :: Sign -- ^ 'def' = 'Positive'
-    , durDay    :: Int
-    , durHour   :: Int
-    , durMinute :: Int
-    , durSecond :: Int
-    }
-    | DurationTime
-    { durSign   :: Sign
-    , durHour   :: Int
-    , durMinute :: Int
-    , durSecond :: Int
-    }
-    | DurationWeek
-    { durSign :: Sign
-    , durWeek :: Int
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Sign.
-data Sign = Positive | Negative
-            deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default Sign where
-    def = Positive
-
 -- | Duration property. 3.8.2.5.
 data DurationProp = DurationProp
     { durationValue :: Duration
@@ -535,32 +499,6 @@ data FreeBusy = FreeBusy
     , freeBusyOther   :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Period of time. 3.3.9.
-data Period
-    = PeriodDates    DateTime DateTime
-    | PeriodDuration DateTime Duration
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Period of time which must be UTC, as in FreeBusy. 3.3.9.
-data UTCPeriod
-    = UTCPeriodDates    UTCTime UTCTime
-    | UTCPeriodDuration UTCTime Duration
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Free/Busy Time Type. 3.2.9.
---
--- Unrecognized FBTypeX MUST be treated as Busy.
-data FBType
-    = Free
-    | Busy
-    | BusyUnavailable
-    | BusyTentative
-    | FBTypeX (CI Text)
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default FBType where
-    def = Busy
-
 -- | Time Transparency. 3.8.2.7.
 data TimeTransparency
     = Opaque      { timeTransparencyOther :: OtherParams }
@@ -572,8 +510,8 @@ instance Default TimeTransparency where
 
 -- | Time Zone Identifier. 3.8.3.1.
 data TZID = TZID
-    { tzidValue  :: Text
-    , tzidGlobal :: Bool
+    { tzidValue  :: Text -- ^ Full name, including solidus if present.
+    , tzidGlobal :: Bool -- ^ If the solidus, indicating globalness, is present.
     , tzidOther  :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
@@ -582,12 +520,6 @@ data TZName = TZName
     { tzNameValue    :: Text
     , tzNameLanguage :: Maybe Language
     , tzNameOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | UTC Offset. 3.3.14, 3.8.3.4, and 3.8.3.3. (unified-ish)
-data UTCOffset = UTCOffset
-    { utcOffsetValue :: Int -- ^ Number of seconds away from UTC
-    , utcOffsetOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Time Zone URL. 3.8.3.5.
@@ -612,47 +544,6 @@ data Attendee = Attendee
     , attendeeLanguage :: Maybe Language
     , attendeeOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Calendar User Type. 3.2.3.
---
--- Unrecognized CUTypeX MUST be treated as Unknown.
-data CUType
-    = Individual
-    | Group
-    | Resource
-    | Room
-    | Unknown
-    | CUTypeX (CI Text)
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default CUType where
-    def = Individual
-
--- | Role. 3.2.16.
-data Role = Chair
-          | ReqParticipant
-          | OptParticipant
-          | NonParticipant
-          | RoleX (CI Text)
-            deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default Role where
-    def = ReqParticipant
-
--- | Participation Status. 3.2.12.
-data PartStat -- Splitting requires splitting attendee too...
-    = PartStatNeedsAction
-    | Accepted
-    | Declined
-    | Tentative
-    | Delegated
-    | PartStatCompleted
-    | InProcess
-    | PartStatX (CI Text)
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default PartStat where
-    def = PartStatNeedsAction
 
 -- | Contact. 3.8.4.2.
 data Contact = Contact
@@ -687,25 +578,12 @@ data RecurrenceId
     , recurrenceIdOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Recurrence Identifier Range. 3.2.13
-data Range = ThisAndFuture | ThisAndPrior
-             deriving (Show, Eq, Ord, Typeable, Generic)
-
 -- | Related To. 3.8.4.5.
 data RelatedTo = RelatedTo
     { relatedToValue :: Text
-    , relatedToType  :: RelationshipType
+    , relatedToType  :: RelType
     , relatedToOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Relationship Type. 3.2.15.
---
--- Unrecognized RelationshipTypeX values MUST be treated as Parent.
-data RelationshipType = Parent | Child | Sibling | RelationshipTypeX (CI Text)
-                        deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default RelationshipType where
-    def = Parent
 
 -- | Uniform Resource Locator. 3.8.4.6.
 data URL = URL
@@ -745,38 +623,6 @@ data RDate
     , rDateOther   :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Frequency in recurrences. 3.3.10.
-data Frequency
-    = Secondly
-    | Minutely
-    | Hourly
-    | Daily
-    | Weekly
-    | Monthly
-    | Yearly
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Weekday, in recurrences. 3.3.10.
-data Weekday = Sunday | Monday | Tuesday | Wednesday | Thursday
-                      | Friday | Saturday
-               deriving (Show, Eq, Ord, Bounded, Enum, Typeable, Generic)
-
--- | Recur value. 3.3.10.
-data Recur = Recur
-    { recurFreq       :: Frequency
-    , recurUntilCount :: Maybe (Either (Either Date DateTime) Int)
-    , recurInterval   :: Int
-    , recurBySecond   :: [Int]
-    , recurByMinute   :: [Int]
-    , recurByHour     :: [Int]
-    , recurByDay      :: [Either (Int, Weekday) Weekday]
-    , recurByMonthDay :: [Int]
-    , recurByYearDay  :: [Int]
-    , recurByWeekNo   :: [Int]
-    , recurByMonth    :: [Int]
-    , recurBySetPos   :: [Int]
-    , recurWkSt       :: Weekday
-    } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Recurrence Rule. 3.8.5.3.
 data RRule = RRule
@@ -793,18 +639,11 @@ data Repeat = Repeat
 instance Default Repeat where
     def = Repeat 0 def
 
--- | Alarm Trigger Relationship. 3.2.14.
-data AlarmTriggerRelationship = Start | End
-                                deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default AlarmTriggerRelationship where
-    def = Start
-
 -- | Trigger. 3.8.6.3.
 data Trigger
     = TriggerDuration
     { triggerDuration :: Duration
-    , triggerRelated  :: AlarmTriggerRelationship -- ^ 'def' = 'Start'
+    , triggerRelated  :: Related -- ^ 'def' = 'Start'
     , triggerOther    :: OtherParams
     }
     | TriggerDateTime
