@@ -324,25 +324,6 @@ data VOther = VOther
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 
--- | Time Zone Identifier. 3.8.3.1.
-data TZID = TZID
-    { tzidValue  :: Text -- ^ Full name, including solidus if present.
-    , tzidGlobal :: Bool -- ^ If the solidus, indicating globalness, is present.
-    , tzidOther  :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Time Zone Name. 3.8.3.2.
-data TZName = TZName
-    { tzNameValue    :: Text
-    , tzNameLanguage :: Maybe Language
-    , tzNameOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Time Zone URL. 3.8.3.5.
-data TZUrl = TZUrl
-    { tzUrlValue :: URI
-    , tzUrlOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Attendee. 3.8.4.1.
 data Attendee = Attendee
