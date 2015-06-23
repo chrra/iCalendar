@@ -414,7 +414,7 @@ instance IsProperty Summary where
                          toParam summaryLanguage <> toParam summaryOther
         text summaryValue
 
-instance IsProperty TimeTransparency where
+instance IsProperty Transp where
     printProperty x | x == def = return ()
                     | otherwise = ln $ do
                         prop "TRANSP" $ timeTransparencyOther x
@@ -790,7 +790,7 @@ instance IsValue Recur where
         unless (recurWkSt == Monday) $
             out ";WKST=" >> printValue recurWkSt
 
-instance IsValue TimeTransparency where
+instance IsValue Transp where
     printValue Opaque {}      = out "OPAQUE"
     printValue Transparent {} = out "TRANSPARENT"
 

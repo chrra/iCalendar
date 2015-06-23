@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
--- | Descriptive iCalendar properties.
+-- | Descriptive Component Properties.
 --
 -- <https://tools.ietf.org/html/rfc5545#section-3.8.1>
 module Text.ICalendar.Types.Properties.Descriptive

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
--- | iCalendar property value types.
+-- | Property Value Data Types.
 --
 -- <https://tools.ietf.org/html/rfc5545#section-3.3>
 module Text.ICalendar.Types.Values
@@ -81,7 +81,7 @@ data DateTime
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Duration, 3.3.6.
-data Duration -- TODO(?): Convert to DiffTime?
+data Duration -- TODO(?): Convert to DiffTime? Fixes 'DurationProp' conflict.
     = DurationDate
     { durSign   :: Sign -- ^ 'def' = 'Positive'
     , durDay    :: Int

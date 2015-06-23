@@ -63,7 +63,7 @@ instance NFData FreeBusy
 instance NFData Period
 instance NFData UTCPeriod
 instance NFData FBType
-instance NFData TimeTransparency
+instance NFData Transp
 instance NFData TZID
 instance NFData TZName
 instance NFData UTCOffset

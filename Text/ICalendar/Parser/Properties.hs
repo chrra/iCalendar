@@ -222,7 +222,7 @@ parseRecurId dts (ContentLine p "RECURRENCE-ID" o bs) = do
 parseRecurId _ x = throwError $ "parseRecurId: " ++ show x
 
 -- | Parse time transparency. 3.8.2.7
-parseTransp :: Content -> ContentParser TimeTransparency
+parseTransp :: Content -> ContentParser Transp
 parseTransp (ContentLine _ "TRANSP" o x)
     | CI.mk x == "OPAQUE" = return . Opaque $ toO o
     | CI.mk x == "TRANSPARENT" = return . Transparent $ toO o

@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
--- | iCalendar parameter types.
+-- | Property parameters.
 --
 -- <https://tools.ietf.org/html/rfc5545#section-3.2>
 module Text.ICalendar.Types.Parameters
