@@ -24,8 +24,8 @@ instance NFData OtherParam
 instance NFData OtherParams
 instance NFData VCalendar
 instance NFData ProdId
-instance NFData ICalVersion
-instance NFData Scale
+instance NFData Version
+instance NFData CalScale
 instance NFData Method
 instance NFData VEvent
 instance NFData VTodo

@@ -303,7 +303,7 @@ parseTZName x = throwError $ "parseTZName: " ++ show x
 
 
 -- | Parse a VERSION property 3.7.4
-parseVersion :: Content -> ContentParser ICalVersion
+parseVersion :: Content -> ContentParser Version
 parseVersion (ContentLine _ "VERSION" o bs) = do
     c <- asks dfBS2Text
     let (maxver', minver'') = break (==';') . T.unpack $ c bs
@@ -316,11 +316,11 @@ parseVersion (ContentLine _ "VERSION" o bs) = do
     when (isNothing maxver) .
         throwError $ "parseVersion: error parsing version: " ++ show maxver'
     if null minver''
-       then return $ MaxICalVersion maxJ (toO o)
+       then return $ MaxVersion maxJ (toO o)
        else do when (isNothing minver) .
                     throwError $ "parseVersion: error parsing version: "
                                    ++ show minver'
-               return $ MinMaxICalVersion maxJ minJ (toO o)
+               return $ MinMaxVersion maxJ minJ (toO o)
 parseVersion x = throwError $ "parseVersion: " ++ show x
 
 -- | Parse a TZID property. 3.8.3.1

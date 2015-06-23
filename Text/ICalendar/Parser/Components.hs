@@ -23,7 +23,7 @@ parseVCalendar :: Content -> ContentParser VCalendar
 parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
     vcProdId <- reqLine1 "PRODID" (parseSimple ProdId)
     vcVersion <- reqLine1 "VERSION" parseVersion
-    vcScale <- optLine1 "CALSCALE" (parseSimpleI Scale)
+    vcCalScale <- optLine1 "CALSCALE" (parseSimpleI CalScale)
     vcMethod <- optLine1 "METHOD" (parseSimpleI ((Just .) . Method))
     vcTimeZones <- f (tzidValue . vtzId) =<< optCompN "VTIMEZONE" parseVTimeZone
     vcEvents <- f (uidValue . veUID &&& recur . veRecurId)

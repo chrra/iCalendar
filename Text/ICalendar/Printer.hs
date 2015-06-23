@@ -86,8 +86,8 @@ printVCalendar VCalendar {..} = do
             printValue vcVersion                    -- compatibility.
     ln $ do prop "PRODID" $ prodIdOther vcProdId
             text $ prodIdValue vcProdId
-    ln $ do prop "CALSCALE" $ scaleOther vcScale
-            text . CI.original $ scaleValue vcScale
+    ln $ do prop "CALSCALE" $ calScaleOther vcCalScale
+            text . CI.original $ calScaleValue vcCalScale
     forM_ vcMethod $ \meth -> do
         prop "METHOD" $ methodOther meth
         ln . text . CI.original $ methodValue meth
@@ -752,9 +752,9 @@ printUTCTime = out . T.pack . formatTime "%C%y%m%dT%H%M%SZ"
 class IsValue a where
     printValue :: a -> ContentPrinter ()
 
-instance IsValue ICalVersion where
-    printValue MaxICalVersion {..} = out . T.pack $ Ver.showVersion versionMax
-    printValue MinMaxICalVersion {..} = do
+instance IsValue Version where
+    printValue MaxVersion {..} = out . T.pack $ Ver.showVersion versionMax
+    printValue MinMaxVersion {..} = do
         out . T.pack $ Ver.showVersion versionMin
         putc ';'
         out . T.pack $ Ver.showVersion versionMax
