@@ -35,7 +35,7 @@ instance NFData VTimeZone
 instance NFData TZProp
 instance NFData VAlarm
 instance NFData VOther
-instance NFData Attachment
+instance NFData Attach
 instance NFData Categories
 instance NFData Class
 instance NFData ClassValue

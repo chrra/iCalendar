@@ -165,7 +165,7 @@ data VEvent = VEvent
     , veRecurId       :: Maybe RecurrenceId
     , veRRule         :: Set RRule
     , veDTEndDuration :: Maybe (Either DTEnd DurationProp)
-    , veAttach        :: Set Attachment
+    , veAttach        :: Set Attach
     , veAttendee      :: Set Attendee
     , veCategories    :: Set Categories
     , veComment       :: Set Comment
@@ -201,7 +201,7 @@ data VTodo = VTodo
     , vtUrl         :: Maybe URL
     , vtRRule       :: Set RRule
     , vtDueDuration :: Maybe (Either Due DurationProp)
-    , vtAttach      :: Set Attachment
+    , vtAttach      :: Set Attach
     , vtAttendee    :: Set Attendee
     , vtCategories  :: Set Categories
     , vtComment     :: Set Comment
@@ -230,7 +230,7 @@ data VJournal = VJournal
     , vjSummary     :: Maybe Summary
     , vjUrl         :: Maybe URL
     , vjRRule       :: Set RRule
-    , vjAttach      :: Set Attachment
+    , vjAttach      :: Set Attach
     , vjAttendee    :: Set Attendee
     , vjCategories  :: Set Categories
     , vjComment     :: Set Comment
@@ -287,7 +287,7 @@ data VAlarm
     { vaTrigger     :: Trigger
     , vaRepeat      :: Repeat -- ^ 'def' = 0
     , vaDuration    :: Maybe DurationProp
-    , vaAudioAttach :: Maybe Attachment
+    , vaAudioAttach :: Maybe Attach
     , vaOther       :: Set OtherProperty
     , vaActionOther :: OtherParams
     }
@@ -306,7 +306,7 @@ data VAlarm
     , vaAttendee    :: Set Attendee
     , vaRepeat      :: Repeat
     , vaDuration    :: Maybe DurationProp
-    , vaMailAttach  :: Set Attachment
+    , vaMailAttach  :: Set Attach
     , vaOther       :: Set OtherProperty
     , vaActionOther :: OtherParams
     }
@@ -323,135 +323,10 @@ data VOther = VOther
     , voProps :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
--- | Attachment. 3.8.1.1.
-data Attachment
-    = UriAttachment
-    { attachFmtType :: Maybe MIMEType
-    , attachUri     :: URI
-    , attachOther   :: OtherParams
-    }
-    | BinaryAttachment
-    { attachFmtType :: Maybe MIMEType
-    , attachContent :: ByteString
-    , attachOther   :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Categories. 3.8.1.2.
-data Categories = Categories
-    { categoriesValues   :: Set Text
-    , categoriesLanguage :: Maybe Language
-    , categoriesOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Classification. 3.8.1.3.
-data Class = Class
-    { classValue :: ClassValue
-    , classOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default Class where
-    def = Class def def
-
--- | Classification value. 3.8.1.3.
--- Unrecognized ClassValueX MUST be treated as Private.
-data ClassValue
-    = Public
-    | Private
-    | Confidential
-    | ClassValueX (CI Text)
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default ClassValue where
-    def = Public
-
 -- | Date-Time Completed. 3.8.2.1.
 data Completed = Completed
     { completedValue :: DateTime
     , completedOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Comment. 3.8.1.4.
-data Comment = Comment
-    { commentValue    :: Text
-    , commentAltRep   :: Maybe URI
-    , commentLanguage :: Maybe Language
-    , commentOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Description. 3.8.1.5.
-data Description = Description
-    { descriptionValue    :: Text
-    , descriptionAltRep   :: Maybe URI
-    , descriptionLanguage :: Maybe Language
-    , descriptionOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Geographic Position. 3.8.1.6.
-data Geo = Geo
-    { geoLat   :: Float
-    , geoLong  :: Float
-    , geoOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Location. 3.8.1.7.
-data Location = Location
-    { locationValue    :: Text
-    , locationAltRep   :: Maybe URI
-    , locationLanguage :: Maybe Language
-    , locationOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Percent complete. 3.8.1.8.
-data PercentComplete = PercentComplete
-    { percentCompleteValue :: Int
-    , percentCompleteOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Priority. 3.8.1.9.
-data Priority = Priority
-    { priorityValue :: Int
-    , priorityOther :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
-instance Default Priority where
-    def = Priority 0 def
-
--- | Resources. 3.8.1.10.
-data Resources = Resources
-    { resourcesValue    :: Set Text
-    , resourcesAltRep   :: Maybe URI
-    , resourcesLanguage :: Maybe Language
-    , resourcesOther    :: OtherParams
-    } deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Status, but only for Events. 3.8.1.11.
-data EventStatus
-    = TentativeEvent { eventStatusOther :: OtherParams }
-    | ConfirmedEvent { eventStatusOther :: OtherParams }
-    | CancelledEvent { eventStatusOther :: OtherParams }
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Status, but only for TODOs. 3.8.1.11.
-data TodoStatus
-    = TodoNeedsAction { todoStatusOther :: OtherParams }
-    | CompletedTodo   { todoStatusOther :: OtherParams }
-    | InProcessTodo   { todoStatusOther :: OtherParams }
-    | CancelledTodo   { todoStatusOther :: OtherParams }
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Status, but only for Journals. 3.8.1.11.
-data JournalStatus
-    = DraftJournal     { journalStatusOther :: OtherParams }
-    | FinalJournal     { journalStatusOther :: OtherParams }
-    | CancelledJournal { journalStatusOther :: OtherParams }
-      deriving (Show, Eq, Ord, Typeable, Generic)
-
--- | Summary. 3.8.1.12.
-data Summary = Summary
-    { summaryValue    :: Text
-    , summaryAltRep   :: Maybe URI
-    , summaryLanguage :: Maybe Language
-    , summaryOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Date-Time End. 3.8.2.2.

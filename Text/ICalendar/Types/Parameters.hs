@@ -13,7 +13,6 @@ module Text.ICalendar.Types.Parameters
     , DelegatedFrom(..)
     , DelegatedTo(..)
     , Dir(..)
-    , FBType(..)
     -- | Omitted:
     --
     -- Encoding embedded directly in property 'Attachment'
@@ -21,6 +20,7 @@ module Text.ICalendar.Types.Parameters
     -- @
     --     FMTType = 'Maybe' 'MIMEType'
     -- @
+    , FBType(..)
     , Language(..)
     , Member(..)
     , PartStat(..)

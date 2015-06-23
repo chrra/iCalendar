@@ -36,8 +36,11 @@ module Text.ICalendar.Types.Values
     --     URI = 'URI'
     -- @
     , UTCOffset(..)
+    -- * Values that are really Text but that can be refined further:
+    , ClassValue(..)
     ) where
 
+import           Data.CaseInsensitive            (CI)
 import           Data.Default                    (Default (..))
 import           Data.Text.Lazy                  (Text)
 import           Data.Time                       (Day, LocalTime, UTCTime)
@@ -157,3 +160,17 @@ data UTCOffset = UTCOffset
     { utcOffsetValue :: Int -- ^ Number of seconds away from UTC
     , utcOffsetOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
+
+-- | Classification value. 3.8.1.3.
+--
+-- Unrecognized ClassValueX MUST be treated as Private.
+data ClassValue
+    = Public
+    | Private
+    | Confidential
+    | ClassValueX (CI Text)
+      deriving (Show, Eq, Ord, Typeable, Generic)
+
+-- | 'Public'.
+instance Default ClassValue where
+    def = Public

@@ -430,7 +430,7 @@ instance IsProperty RRule where
     printProperty RRule {..} = ln $ do prop "RRULE" rRuleOther
                                        printValue rRuleValue
 
-instance IsProperty Attachment where
+instance IsProperty Attach where
     printProperty a = ln $ prop "ATTACH" a >> printValue a
 
 instance IsProperty Attendee where
@@ -626,13 +626,13 @@ instance ToParam FBType where
 instance ToParam MIMEType where
     toParam m = [("FMTTYPE", [(NoQuotes, T.fromStrict $ showMIMEType m)])]
 
-instance ToParam Attachment where
-    toParam UriAttachment {..} = toParam attachFmtType <>
-                                 toParam attachOther
-    toParam BinaryAttachment {..} = toParam attachFmtType <>
-                                    toParam attachOther <>
-                                    [ ("VALUE", [(NoQuotes, "BINARY")])
-                                    , ("ENCODING", [(NoQuotes, "BASE64")])]
+instance ToParam Attach where
+    toParam UriAttach {..} = toParam attachFmtType <>
+                             toParam attachOther
+    toParam BinaryAttach {..} = toParam attachFmtType <>
+                                toParam attachOther <>
+                                [ ("VALUE", [(NoQuotes, "BINARY")])
+                                , ("ENCODING", [(NoQuotes, "BASE64")])]
 
 instance ToParam CUType where
     toParam x | x == def = []
@@ -892,9 +892,9 @@ instance IsValue RDate where
     printValue RDateDateTimes {..} = printN printValue $ S.toList rDateDateTimes
     printValue RDatePeriods {..}   = printN printValue $ S.toList rDatePeriods
 
-instance IsValue Attachment where
-    printValue UriAttachment {..} = printShow attachUri
-    printValue BinaryAttachment {..} = bytestring $ B64.encode attachContent
+instance IsValue Attach where
+    printValue UriAttach {..} = printShow attachUri
+    printValue BinaryAttach {..} = bytestring $ B64.encode attachContent
 
 -- }}}
 -- {{{ Lib

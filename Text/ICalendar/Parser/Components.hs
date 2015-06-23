@@ -81,7 +81,7 @@ parseVEvent mmethod (Component _ "VEVENT" _) = do
     when (S.size veRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
     veDTEndDuration <- parseXDurationOpt "DTEND" DTEndDateTime DTEndDate
                                          veDTStart
-    veAttach <- optLineN "ATTACH" parseAttachment
+    veAttach <- optLineN "ATTACH" parseAttach
     veAttendee <- optLineN "ATTENDEE" parseAttendee
     veCategories <- optLineN "CATEGORIES" parseCategories
     veComment <- optLineN "COMMENT" $ parseAltRepLang Comment
@@ -127,7 +127,7 @@ parseVTodo (Component _ "VTODO" _) = do
     when (S.size vtRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
     vtDueDuration <- parseXDurationOpt "DUE" DueDateTime DueDate vtDTStart
 
-    vtAttach <- optLineN "ATTACH" parseAttachment
+    vtAttach <- optLineN "ATTACH" parseAttach
     vtAttendee <- optLineN "ATTENDEE" parseAttendee
     vtCategories <- optLineN "CATEGORIES" parseCategories
     vtComment <- optLineN "COMMENT" $ parseAltRepLang Comment
@@ -183,7 +183,7 @@ parseVAlarm (Component _ "VALARM" _) = do
     case CI.mk a of
          "AUDIO"   -> do
             (vaRepeat, vaDuration) <- repAndDur
-            vaAudioAttach <- optLine1 "ATTACH" $ Just .: parseAttachment
+            vaAudioAttach <- optLine1 "ATTACH" $ Just .: parseAttach
             vaOther <- otherProperties
             return VAlarmAudio {..}
          "DISPLAY" -> do
@@ -198,7 +198,7 @@ parseVAlarm (Component _ "VALARM" _) = do
                 parseAltRepLang Description
              vaSummary <- reqLine1 "SUMMARY" $ parseAltRepLang Summary
              vaAttendee <- reqLineN "ATTENDEE" parseAttendee
-             vaMailAttach <- optLineN "ATTACH" parseAttachment
+             vaMailAttach <- optLineN "ATTACH" parseAttach
              vaOther <- otherProperties
              return VAlarmEmail {..}
          vaAction  -> do vaOther <- otherProperties
@@ -232,7 +232,7 @@ parseVJournal (Component _ "VJOURNAL" _) = do
     vjUrl <- optLine1 "URL" (Just .: parseSimpleURI URL)
     vjRRule <- optLineN "RRULE" $ parseRRule vjDTStart
     when (S.size vjRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
-    vjAttach <- optLineN "ATTACH" parseAttachment
+    vjAttach <- optLineN "ATTACH" parseAttach
     vjAttendee <- optLineN "ATTENDEE" parseAttendee
     vjCategories <- optLineN "CATEGORIES" parseCategories
     vjComment <- optLineN "COMMENT" $ parseAltRepLang Comment
