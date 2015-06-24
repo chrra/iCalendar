@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 -- | Alarm Component Properties
 --
 -- <https://tools.ietf.org/html/rfc5545#section-3.8.6>

@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE OverloadedStrings  #-}
 -- | Calendar Components
 --
@@ -27,6 +28,7 @@ import qualified Data.Version                                     as V
 import           GHC.Generics                                     (Generic)
 
 import           Paths_iCalendar                                  (version)
+import           Text.ICalendar.Types.Parameters
 import           Text.ICalendar.Types.Properties.Alarm
 import           Text.ICalendar.Types.Properties.Calendar
 import           Text.ICalendar.Types.Properties.ChangeManagement
@@ -37,7 +39,6 @@ import           Text.ICalendar.Types.Properties.Recurrence
 import           Text.ICalendar.Types.Properties.Relationship
 import           Text.ICalendar.Types.Properties.TimeZone
 import           Text.ICalendar.Types.Values
-import           Text.ICalendar.Types.Parameters
 
 -- | ICalendar object, 3.4, 3.6.
 data VCalendar = VCalendar

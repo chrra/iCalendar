@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -39,13 +40,13 @@ module Text.ICalendar.Types.Parameters
     , OtherParams(..)
     ) where
 
-import           Data.CaseInsensitive       (CI)
-import           Data.Default               (Default (..))
-import           Data.Set                   (Set)
-import           Data.Text.Lazy             (Text)
-import           Data.Typeable              (Typeable)
-import           GHC.Generics               (Generic)
-import           Network.URI                (URI)
+import           Data.CaseInsensitive (CI)
+import           Data.Default         (Default (..))
+import           Data.Set             (Set)
+import           Data.Text.Lazy       (Text)
+import           Data.Typeable        (Typeable)
+import           GHC.Generics         (Generic)
+import           Network.URI          (URI)
 
 -- | Alternate representation, 3.2.1.
 newtype AltRep = AltRep URI
