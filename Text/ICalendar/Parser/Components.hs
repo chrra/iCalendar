@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE FlexibleContexts  #-}
 module Text.ICalendar.Parser.Components where
 
 import           Control.Applicative
@@ -40,11 +41,11 @@ parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
         recur Nothing = Nothing
         recur (Just (RecurrenceIdDate x _ _)) = Just (Left x)
         recur (Just (RecurrenceIdDateTime x _ _)) = Just (Right x)
-        f :: Ord b => (a -> b) -> Set a -> ContentParser (M.Map b a)
+        f :: (Show b, Ord b) => (a -> b) -> Set a -> ContentParser (M.Map b a)
         f g = F.foldlM h M.empty
           where h m e = let k = g e
                          in if k `M.member` m
-                               then throwError "Duplicate UID/RecurId/TZID."
+                               then throwError $ "Duplicate UID/RecurId/TZID " ++ show k
                                else return $ M.insert k e m
 parseVCalendar _ = throwError "parseVCalendar: Content given not a VCALENDAR\
                               \ component."
