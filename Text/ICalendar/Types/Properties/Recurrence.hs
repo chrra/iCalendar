@@ -48,4 +48,3 @@ data RRule = RRule
     { rRuleValue :: Recur
     , rRuleOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
-

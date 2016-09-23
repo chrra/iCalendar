@@ -18,7 +18,6 @@ import           Network.URI                     (URI)
 
 import           Text.ICalendar.Types.Parameters
 
-
 -- | Time Zone Identifier, 3.8.3.1.
 data TZID = TZID
     { tzidValue  :: Text -- ^ Full name, including solidus if present.

@@ -63,10 +63,7 @@ data CalAddress
 type CalAddress = URI
 
 -- | Date, 3.3.4.
-data Date
-    = Date
-    { dateValue :: Day
-    } deriving (Show, Eq, Ord, Typeable, Generic)
+newtype Date = Date { dateValue :: Day } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Date-Time, 3.3.5.
 data DateTime

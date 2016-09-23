@@ -38,9 +38,9 @@ parseRelType x         = RelTypeX x
 
 -- | Parse bool. 3.3.2
 parseBool :: CI Text -> ContentParser Bool
-parseBool "TRUE" = return True
+parseBool "TRUE"  = return True
 parseBool "FALSE" = return False
-parseBool x = throwError $ "parseBool: " ++ show x
+parseBool x       = throwError $ "parseBool: " ++ show x
 
 -- | Parse recurrence identifier range. 3.2.13
 parseRange :: CI Text -> ContentParser Range
@@ -60,30 +60,30 @@ parseFBType x                  = FBTypeX x
 -- | Parse participation status. 3.2.12
 parsePartStat :: CI Text -> PartStat
 parsePartStat "NEEDS-ACTION" = PartStatNeedsAction
-parsePartStat "ACCEPTED" = Accepted
-parsePartStat "DECLINED" = Declined
-parsePartStat "TENTATIVE" = Tentative
-parsePartStat "DELEGATED" = Delegated
-parsePartStat "COMPLETED" = PartStatCompleted
-parsePartStat "IN-PROCESS" = InProcess
-parsePartStat x = PartStatX x
+parsePartStat "ACCEPTED"     = Accepted
+parsePartStat "DECLINED"     = Declined
+parsePartStat "TENTATIVE"    = Tentative
+parsePartStat "DELEGATED"    = Delegated
+parsePartStat "COMPLETED"    = PartStatCompleted
+parsePartStat "IN-PROCESS"   = InProcess
+parsePartStat x              = PartStatX x
 
 -- | Parse role.
 parseRole :: CI Text -> Role
-parseRole "CHAIR" = Chair
+parseRole "CHAIR"           = Chair
 parseRole "REQ-PARTICIPANT" = ReqParticipant
 parseRole "OPT-PARTICIPANT" = OptParticipant
 parseRole "NON-PARTICIPANT" = NonParticipant
-parseRole x = RoleX x
+parseRole x                 = RoleX x
 
 
 parseCUType :: CI Text -> CUType
 parseCUType "INDIVIDUAL" = Individual
-parseCUType "GROUP" = Group
-parseCUType "RESOURCE" = Resource
-parseCUType "ROOM" = Room
-parseCUType "UNKNOWN" = Unknown
-parseCUType x = CUTypeX x
+parseCUType "GROUP"      = Group
+parseCUType "RESOURCE"   = Resource
+parseCUType "ROOM"       = Room
+parseCUType "UNKNOWN"    = Unknown
+parseCUType x            = CUTypeX x
 
 parseMime :: Text -> ContentParser MIMEType
 parseMime t = let m = mimeType .: parseMIMEType $ T.toStrict t
@@ -168,10 +168,10 @@ parseRecur dts =
                  <|> istring "COUNT=" *> (Just . Right <$> digits)
         until' = do txt <- manyTill P.anyChar (void (P.char ';') <|> P.eof)
                     return . Just . Left $
-                        case dts of
-                             DTStartDateTime _ _ ->
+                        case dtStartValue dts of
+                             VDateTime _ ->
                                  Right <$> parseDateTime Nothing (B.pack txt)
-                             DTStartDate _ _ ->
+                             VDate _ ->
                                  Left <$> parseDate (B.pack txt)
         term = optional (P.char ';')
         istring :: String -> TextParser ()
@@ -179,9 +179,9 @@ parseRecur dts =
 
         mkRecur f uc i s m h d md yd wn mo sp wkst = do
             uc' <- case uc of
-                        Just (Left x) -> Just . Left <$> x
+                        Just (Left x)  -> Just . Left <$> x
                         Just (Right y) -> return . Just $ Right y
-                        Nothing -> return Nothing
+                        Nothing        -> return Nothing
             return $ Recur f uc' i s m h d md yd wn mo sp wkst
 
 

@@ -38,7 +38,7 @@ parseICalendar s bs = do
     let xs = map (runCP s . parseVCalendar) a
     (x, w) <- ((flip.).) flip foldM ([], []) xs $ \(x, ws) (g, (pos, _), w) ->
              case g of
-                  Left e -> Left $ "Line " ++ show pos ++ ": " ++ e
+                  Left e  -> Left $ "Line " ++ show pos ++ ": " ++ e
                   Right y -> Right (y:x, w <> ws)
     return (x, w)
 

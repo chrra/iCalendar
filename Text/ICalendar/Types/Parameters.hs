@@ -182,7 +182,7 @@ data OtherParam = OtherParam (CI Text) [Text]
                   deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Other parameters, either x-param or other iana-param.
-data OtherParams = OtherParams (Set OtherParam)
+newtype OtherParams = OtherParams (Set OtherParam)
                    deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Empty.
