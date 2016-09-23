@@ -15,6 +15,8 @@ category:            Text
 build-type:          Simple
 tested-with:         GHC==7.6.1
 cabal-version:       >=1.8
+data-files:          "tests/ical/*.ics"
+
 
 source-repository head
   type:              git
@@ -29,6 +31,8 @@ library
                      , Text.ICalendar.Parser
                      , Text.ICalendar.Parser.Content
                      , Text.ICalendar.Printer
+                     , Text.ICalendar.Recurrence
+                     , Text.ICalendar.Recurrence.ByRules
                      , Text.ICalendar.Types
                      , Text.ICalendar.Types.Components
                      , Text.ICalendar.Types.Parameters
@@ -46,6 +50,8 @@ library
                      , Text.ICalendar.Parser.Components
                      , Text.ICalendar.Parser.Parameters
                      , Text.ICalendar.Parser.Properties
+                     , Text.ICalendar.Recurrence.DateTime
+                     , Text.ICalendar.Recurrence.Types
                      , Paths_iCalendar
 
   if flag(network-uri)
@@ -58,7 +64,7 @@ library
                      , bytestring >=0.10 && < 0.11, parsec >=3.1.0
                      , text, containers >= 0.5 && < 0.6, mime >=0.4.0.2
                      , mtl >=2.2.1, old-locale, base64-bytestring ==1.0.*
-                     , deepseq
+                     , deepseq, heap
   ghc-options:       -Wall
 
 test-suite spec
@@ -68,7 +74,7 @@ test-suite spec
   main-is:           Spec.hs
   build-depends:       base  >= 4.5 && <5, iCalendar
                      , bytestring, text, data-default, case-insensitive
-                     , hspec == 2.*
+                     , hspec == 2.*, containers, time, parsec
 
 benchmark bench
   type:              exitcode-stdio-1.0
