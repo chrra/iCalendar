@@ -13,14 +13,16 @@ module Text.ICalendar.Types.Properties.Relationship
     , UID(..)
     ) where
 
-import           Data.Set                        (Set)
-import           Data.Text.Lazy                  (Text)
-import           Data.Typeable                   (Typeable)
-import           GHC.Generics                    (Generic)
-import           Network.URI                     (URI)
+import           Data.Set                                 (Set)
+import           Data.Text.Lazy                           (Text)
+import           Data.Typeable                            (Typeable)
+import           GHC.Generics                             (Generic)
+import           Network.URI                              (URI)
 
 import           Text.ICalendar.Types.Parameters
+import           Text.ICalendar.Types.Properties.DateTime
 import           Text.ICalendar.Types.Values
+
 
 
 -- | Attendee, 3.8.4.1.
@@ -59,16 +61,10 @@ data Organizer = Organizer -- TODO: CAL-ADDRESS-related properties.
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Recurrence ID, 3.8.4.4.
-data RecurrenceId
-    = RecurrenceIdDate
-    { recurrenceIdDate  :: Date
+data RecurrenceId = RecurrenceId
+    { recurrenceIdValue :: VDateTime
     , recurrenceIdRange :: Maybe Range
     , recurrenceIdOther :: OtherParams
-    }
-    | RecurrenceIdDateTime
-    { recurrenceIdDateTime :: DateTime
-    , recurrenceIdRange    :: Maybe Range
-    , recurrenceIdOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
 -- | Related To, 3.8.4.5.

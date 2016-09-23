@@ -37,12 +37,11 @@ parseFreeBusy (ContentLine _ "FREEBUSY" o bs) = do
 parseFreeBusy x = throwError $ "parseFreeBusy: " ++ show x
 
 parseXDurationOpt :: CI Text
-                  -> (DateTime -> OtherParams -> a)
-                  -> (Date     -> OtherParams -> a)
+                  -> (VDateTime -> OtherParams -> a)
                   -> Maybe DTStart
                   -> ContentParser (Maybe (Either a DurationProp))
-parseXDurationOpt w a b dts = do
-    dte <- optLine1 w $ Just .: parseSimpleDateOrDateTime a b
+parseXDurationOpt w a dts = do
+    dte <- optLine1 w $ Just .: parseSimpleDateOrDateTime a
     dur <- optLine1 "DURATION" $ Just .: parseDurationProp dts
     case (dte, dur) of
          (Nothing, Nothing) -> return Nothing
@@ -187,10 +186,10 @@ parseDurationProp :: Maybe DTStart -> Content -> ContentParser DurationProp
 parseDurationProp dts (ContentLine _ "DURATION" o bs) = do
     val <- parseDuration "DURATION" bs
     case (dts, val) of
-         (Just DTStartDate {}, DurationDate {..})
+         (Just (DTStart VDate {} _), DurationDate {..})
             | durHour == 0 && durMinute == 0 && durSecond == 0 -> return ()
-         (Just DTStartDate {}, DurationWeek {}) -> return ()
-         (Just DTStartDate {}, _) ->
+         (Just (DTStart VDate {} _), DurationWeek {}) -> return ()
+         (Just (DTStart VDate {} _), _) ->
              throwError "DURATION must be in weeks or days when DTSTART \
                         \has VALUE DATE and not DATE-TIME."
          _ -> return ()
@@ -201,21 +200,19 @@ parseRecurId :: Maybe DTStart -> Content -> ContentParser RecurrenceId
 parseRecurId dts (ContentLine p "RECURRENCE-ID" o bs) = do
     range' <- mapM (parseRange . CI.mk <=< paramOnlyOne) $ lookup "RANGE" o
     recurid <- parseSimpleDateOrDateTime
-            (($ range') . RecurrenceIdDateTime)
-            (($ range') . RecurrenceIdDate)
+            (($ range') . RecurrenceId)
             (ContentLine p "RECURRENCE-ID" (filter ((/="RANGE").fst) o) bs)
     case (dts, recurid) of
          (Nothing, _) -> return recurid
-         (Just DTStartDate {}, RecurrenceIdDate {}) ->
+         (Just (DTStart VDate {} _), RecurrenceId VDate {} _ _) ->
              return recurid
-         (Just DTStartDateTime {dtStartDateTimeValue = v},
-          RecurrenceIdDateTime {recurrenceIdDateTime = r}) ->
-               case (v, r) of -- TODO: Check this. iff confuse me.
-                    (UTCDateTime {}, FloatingDateTime {}) -> err dts recurid
-                    (UTCDateTime {}, ZonedDateTime {})    -> err dts recurid
-                    (FloatingDateTime {}, UTCDateTime {}) -> err dts recurid
-                    (ZonedDateTime {}, UTCDateTime {})    -> err dts recurid
-                    _ -> return recurid
+         (Just (DTStart VDateTime {vDateTimeValue = v} _),
+          RecurrenceId VDateTime {vDateTimeValue = r} _ _) ->
+               case (v, r) of
+                    (UTCDateTime {}, UTCDateTime {})           -> return recurid
+                    (ZonedDateTime {}, ZonedDateTime {})       -> return recurid
+                    (FloatingDateTime {}, FloatingDateTime {}) -> return recurid
+                    _                                          -> err dts recurid
          _ -> err dts recurid
   where err d r = throwError $ "parseRecurId: DTSTART local time mismatch: " ++
                                 show (d, r)
@@ -278,7 +275,7 @@ parseGeo (ContentLine _ "GEO" o bs) = do
         throwError $ "Invalid latitude/longitude: " ++ show bs
     return $ Geo (fromJust lat) (fromJust long) (toO o)
   where stripPlus ('+':xs) = xs
-        stripPlus xs = xs
+        stripPlus xs       = xs
 parseGeo x = throwError $ "parseGeo: " ++ show x
 
 -- | Parse classification. 3.8.1.3
@@ -287,10 +284,10 @@ parseClass (ContentLine _ "CLASS" o bs) = do
     iconv <- asks dfBS2IText
     return . flip Class (toO o) $
         case iconv bs of
-             "PUBLIC" -> Public
-             "PRIVATE" -> Private
+             "PUBLIC"       -> Public
+             "PRIVATE"      -> Private
              "CONFIDENTIAL" -> Confidential
-             x -> ClassValueX x
+             x              -> ClassValueX x
 parseClass x = throwError $ "parseClass: " ++ show x
 
 -- | Parse TZName. 3.8.3.1

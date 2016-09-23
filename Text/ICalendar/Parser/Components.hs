@@ -2,7 +2,6 @@
 {-# LANGUAGE RecordWildCards   #-}
 module Text.ICalendar.Parser.Components where
 
-import           Control.Applicative
 import           Control.Arrow                    ((&&&))
 import           Control.Monad.Except             hiding (mapM)
 import           Control.Monad.RWS                (MonadState (get), tell)
@@ -26,21 +25,14 @@ parseVCalendar c@(Component _ "VCALENDAR" _) = down c $ do
     vcCalScale <- optLine1 "CALSCALE" (parseSimpleI CalScale)
     vcMethod <- optLine1 "METHOD" (parseSimpleI ((Just .) . Method))
     vcTimeZones <- f (tzidValue . vtzId) =<< optCompN "VTIMEZONE" parseVTimeZone
-    vcEvents <- f (uidValue . veUID &&& recur . veRecurId)
-                    =<< optCompN "VEVENT" (parseVEvent vcMethod)
-    vcTodos <- f (uidValue . vtUID &&& recur . vtRecurId)
-                    =<< optCompN "VTODO" parseVTodo
-    vcJournals <- f (uidValue . vjUID &&& recur . vjRecurId)
-                    =<< optCompN "VJOURNAL" parseVJournal
+    vcEvents <- f vRUID =<< optCompN "VEVENT" (parseVEvent vcMethod)
+    vcTodos <- f vRUID =<< optCompN "VTODO" parseVTodo
+    vcJournals <- f vRUID =<< optCompN "VJOURNAL" parseVJournal
     vcFreeBusys <- f (uidValue . vfbUID) =<< optCompN "VFREEBUSY" parseVFreeBusy
     vcOtherComps <- otherComponents
     vcOther <- otherProperties
     return VCalendar {..}
-  where recur :: Maybe RecurrenceId -> Maybe (Either Date DateTime)
-        recur Nothing = Nothing
-        recur (Just (RecurrenceIdDate x _ _)) = Just (Left x)
-        recur (Just (RecurrenceIdDateTime x _ _)) = Just (Right x)
-        f :: Ord b => (a -> b) -> Set a -> ContentParser (M.Map b a)
+  where f :: Ord b => (a -> b) -> Set a -> ContentParser (M.Map b a)
         f g = F.foldlM h M.empty
           where h m e = let k = g e
                          in if k `M.member` m
@@ -55,7 +47,7 @@ parseVEvent mmethod (Component _ "VEVENT" _) = do
     veDTStamp <- reqLine1 "DTSTAMP" $ parseSimpleUTC DTStamp
     veUID <- reqLine1 "UID" $ parseSimple UID
     veDTStart <- optLine1 "DTSTART" $
-                  Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+        Just .: parseSimpleDateOrDateTime DTStart
     when (isNothing mmethod && isNothing veDTStart) $
         throwError "A VEVENT in a VCALENDAR without a METHOD requires a \
                    \DTSTART property."
@@ -79,8 +71,7 @@ parseVEvent mmethod (Component _ "VEVENT" _) = do
                     $ Just .: parseRecurId veDTStart
     veRRule <- optLineN "RRULE" $ parseRRule veDTStart
     when (S.size veRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
-    veDTEndDuration <- parseXDurationOpt "DTEND" DTEndDateTime DTEndDate
-                                         veDTStart
+    veDTEndDuration <- parseXDurationOpt "DTEND" DTEnd veDTStart
     veAttach <- optLineN "ATTACH" parseAttach
     veAttendee <- optLineN "ATTENDEE" parseAttendee
     veCategories <- optLineN "CATEGORIES" parseCategories
@@ -106,7 +97,7 @@ parseVTodo (Component _ "VTODO" _) = do
                 (Just .) . Completed
     vtCreated <- optLine1 "CREATED" (Just .: parseCreated)
     vtDTStart <- optLine1 "DTSTART" $
-                Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+                Just .: parseSimpleDateOrDateTime DTStart
     vtDescription <- optLine1 "DESCRIPTION" .
                 parseAltRepLang $ (((Just .) .) .) . Description
     vtGeo <- optLine1 "GEO" (Just .: parseGeo)
@@ -125,8 +116,7 @@ parseVTodo (Component _ "VTODO" _) = do
     vtUrl <- optLine1 "URL" (Just .: parseSimpleURI URL)
     vtRRule <- optLineN "RRULE" $ parseRRule vtDTStart
     when (S.size vtRRule > 1) $ tell ["SHOULD NOT have multiple RRules."]
-    vtDueDuration <- parseXDurationOpt "DUE" DueDateTime DueDate vtDTStart
-
+    vtDueDuration <- parseXDurationOpt "DUE" Due vtDTStart
     vtAttach <- optLineN "ATTACH" parseAttach
     vtAttendee <- optLineN "ATTENDEE" parseAttendee
     vtCategories <- optLineN "CATEGORIES" parseCategories
@@ -161,7 +151,7 @@ parseVTimeZone x = throwError $ "parseVTimeZone: " ++ show x
 parseTZProp :: Content -> ContentParser TZProp
 parseTZProp (Component _ n _) | n `elem` ["STANDARD", "DAYLIGHT"] = do
     tzpDTStart <- reqLine1 "DTSTART" $
-                    parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+                    parseSimpleDateOrDateTime DTStart
     tzpTZOffsetTo <- reqLine1 "TZOFFSETTO" parseUTCOffset
     tzpTZOffsetFrom <- reqLine1 "TZOFFSETFROM" parseUTCOffset
     tzpRRule <- optLineN "RRULE" (parseRRule $ Just tzpDTStart)
@@ -220,7 +210,7 @@ parseVJournal (Component _ "VJOURNAL" _) = do
     vjClass <- optLine1 "CLASS" parseClass
     vjCreated <- optLine1 "CREATED" (Just .: parseCreated)
     vjDTStart <- optLine1 "DTSTART" $
-                Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
+                Just .: parseSimpleDateOrDateTime DTStart
     vjDescription <- optLineN "DESCRIPTION" $ parseAltRepLang Description
     vjLastMod <- optLine1 "LAST-MODIFIED" (Just .: parseLastModified)
     vjOrganizer <- optLine1 "ORGANIZER" (Just .: parseOrganizer)
@@ -251,9 +241,8 @@ parseVFreeBusy (Component _ "VFreeBusy" _) = do
     vfbUID <- reqLine1 "UID" $ parseSimple UID
     vfbContact <- optLine1 "CONTACT" $ Just .: parseAltRepLang Contact
     vfbDTStart <- optLine1 "DTSTART" $
-                  Just .: parseSimpleDateOrDateTime DTStartDateTime DTStartDate
-    vfbDTEnd <- optLine1 "DTEND" $ Just .: parseSimpleDateOrDateTime
-                                                DTEndDateTime DTEndDate
+                  Just .: parseSimpleDateOrDateTime DTStart
+    vfbDTEnd <- optLine1 "DTEND" $ Just .: parseSimpleDateOrDateTime DTEnd
     vfbOrganizer <- optLine1 "ORGANIZER" $ Just .: parseOrganizer
     vfbAttendee <- optLineN "ATTENDEE" parseAttendee
     vfbComment <- optLineN "COMMENT" $ parseAltRepLang Comment
@@ -272,4 +261,3 @@ parseVOther (Component _ voName _) = do
     voProps <- otherProperties
     return VOther {..}
 parseVOther x = throwError $ "parseVOther: "++ show x
-

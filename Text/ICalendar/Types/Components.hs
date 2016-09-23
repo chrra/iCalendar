@@ -6,6 +6,9 @@
 -- <https://tools.ietf.org/html/rfc5545#section-3.6>
 module Text.ICalendar.Types.Components
     ( VCalendar(..)
+    , RUID
+    , VRecurrence(..)
+    , HasRRule(..)
     , VEvent(..)
     , VTodo(..)
     , VJournal(..)
@@ -49,11 +52,11 @@ data VCalendar = VCalendar
     , vcOther      :: Set OtherProperty
     , vcTimeZones  :: Map Text VTimeZone
     -- ^ Map TZID-value VTimeZone
-    , vcEvents     :: Map (Text, Maybe (Either Date DateTime)) VEvent
+    , vcEvents     :: Map RUID VEvent
     -- ^ Map (UID-value, Maybe RecurrenceID-value) VEvent
-    , vcTodos      :: Map (Text, Maybe (Either Date DateTime)) VTodo
+    , vcTodos      :: Map RUID VTodo
     -- ^ Map (UID-value, Maybe RecurrenceID-value) VTodo
-    , vcJournals   :: Map (Text, Maybe (Either Date DateTime)) VJournal
+    , vcJournals   :: Map RUID VJournal
     -- ^ Map (UID-value, Maybe RecurrenceID-value) VJournal
     , vcFreeBusys  :: Map Text VFreeBusy
     -- ^ Map UID-value VFreeBusy
@@ -102,6 +105,34 @@ instance Monoid VCalendar where
                         then c else d
             fb c d = if vfbDTStamp c >= vfbDTStamp d then c else d
 
+class (Show r, Ord r) => HasRRule r where
+    vDTStart       :: r -> Maybe DTStart
+    vDTEndDuration :: r -> Maybe (Either DTEnd DurationProp)
+    vRRule         :: r -> Set RRule
+    vExDate        :: r -> Set ExDate
+    vRDate         :: r -> Set RDate
+    vUpdate        :: r -> DTStart -> r
+    vUpdateBoth    :: r -> (DTStart, Maybe (Either DTEnd DurationProp)) -> r
+    hasRecurrence  :: r -> Bool
+    hasRecurrence r = not $ null (vRRule r) && null (vRDate r)
+
+
+type RUID = (Text, Maybe VDateTime)
+
+-- | Typeclass for reoccuring objects
+class (HasRRule r) => VRecurrence r where
+    vUid           :: r -> UID
+    vSeq           :: r -> Sequence
+    vRecurId       :: r -> Maybe RecurrenceId
+    -- Unique ID of the calendar object
+    vRUID          :: r -> RUID
+    vRUID r = (uidValue $ vUid r, recurrenceIdValue <$> vRecurId r)
+    -- Unique ID of the recurrence Instance -- possibly we should combine these
+    -- and update recurrence ids with vupdate
+    vInstanceID    :: r -> RUID
+    vInstanceID r = (uidValue $ vUid r, dtStartValue <$> vDTStart r)
+
+
 -- | Event Component. 3.6.1.
 data VEvent = VEvent
     { veDTStamp       :: DTStamp
@@ -136,6 +167,25 @@ data VEvent = VEvent
     , veAlarms        :: Set VAlarm
     , veOther         :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable, Generic)
+
+instance HasRRule VEvent where
+    vDTStart       = veDTStart
+    vDTEndDuration = veDTEndDuration
+    vRRule         = veRRule
+    vExDate        = veExDate
+    vRDate         = veRDate
+    vUpdate r s    = r {veDTStart = Just s}
+    vUpdateBoth r (start, Just end) = r {veDTStart = Just start
+                                    , veDTEndDuration = Just end}
+    vUpdateBoth r (start, Nothing) = case (veDTStart r, vDTEndDuration r) of
+        (Just s1, Just (Left dtend)) -> r {veDTStart = Just start
+                , veDTEndDuration = Just (Left (updateEndTime s1 start dtend))}
+        _                 -> vUpdate r start
+
+instance VRecurrence VEvent where
+    vUid           = veUID
+    vSeq           = veSeq
+    vRecurId       = veRecurId
 
 -- | To-Do Component. 3.6.2
 data VTodo = VTodo
@@ -173,6 +223,30 @@ data VTodo = VTodo
     , vtOther       :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable, Generic)
 
+instance HasRRule VTodo where
+    vDTStart       = vtDTStart
+    vDTEndDuration = fmap (either l Right) . vtDueDuration
+      where l (Due x o) = Left (DTEnd x o)
+    vRRule         = vtRRule
+    vExDate        = vtExDate
+    vRDate         = vtRDate
+    vUpdate r s    = r {vtDTStart = Just s}
+    vUpdateBoth r (start, Just end) = r {vtDTStart = Just start
+                                    , vtDueDuration = Just $ toDTEnd end}
+    vUpdateBoth r (start, Nothing) = case (vDTStart r, vDTEndDuration r) of
+        (Just s1, Just (Left dtend)) -> r {vtDTStart = Just start
+                , vtDueDuration = Just $ toDTEnd (Left (updateEndTime s1 start dtend))}
+        _                 -> vUpdate r start
+
+toDTEnd :: Either DTEnd b -> Either Due b
+toDTEnd = let l (DTEnd x o) = Left (Due x o)
+  in either l Right
+
+instance VRecurrence VTodo where
+    vUid           = vtUID
+    vSeq           = vtSeq
+    vRecurId       = vtRecurId
+
 -- | Journal Component. 3.6.3
 data VJournal = VJournal
     { vjDTStamp     :: DTStamp
@@ -200,6 +274,21 @@ data VJournal = VJournal
     , vjRStatus     :: Set RequestStatus
     , vjOther       :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable, Generic)
+
+instance HasRRule VJournal where
+    vDTStart       = vjDTStart
+    vDTEndDuration = const Nothing
+    vRRule         = vjRRule
+    vExDate        = vjExDate
+    vRDate         = vjRDate
+    vUpdate r s    = r {vjDTStart = Just s}
+    vUpdateBoth _ (_, Just _) = error "VJournal can't update end time because it has not end time"
+    vUpdateBoth r (start, Nothing) = vUpdate r start
+
+instance VRecurrence VJournal where
+    vUid           = vjUID
+    vSeq           = vjSeq
+    vRecurId       = vjRecurId
 
 -- | Free/Busy Component. 3.6.4
 data VFreeBusy = VFreeBusy
@@ -240,6 +329,16 @@ data TZProp = TZProp
     , tzpTZName       :: Set TZName
     , tzpOther        :: Set OtherProperty
     } deriving (Show, Eq, Ord, Typeable, Generic)
+
+instance HasRRule TZProp where
+    vDTStart       = Just . tzpDTStart
+    vDTEndDuration = const Nothing
+    vRRule         = tzpRRule
+    vExDate        = def
+    vRDate         = tzpRDate
+    vUpdate r s    =  r {tzpDTStart = s}
+    vUpdateBoth _ (_, Just _)      = error "TZProp Doesn't have an end date"
+    vUpdateBoth r (start, Nothing) = vUpdate r start
 
 -- | VAlarm component. 3.6.6.
 data VAlarm
