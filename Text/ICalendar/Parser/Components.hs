@@ -2,7 +2,6 @@
 {-# LANGUAGE RecordWildCards   #-}
 module Text.ICalendar.Parser.Components where
 
-import           Control.Arrow                    ((&&&))
 import           Control.Monad.Except             hiding (mapM)
 import           Control.Monad.RWS                (MonadState (get), tell)
 import qualified Data.CaseInsensitive             as CI
@@ -254,7 +253,7 @@ parseVFreeBusy (Component _ "VFreeBusy" _) = do
 parseVFreeBusy x = throwError $ "parseVFreeBusy: " ++ show x
 
 otherComponents :: ContentParser (Set VOther)
-otherComponents = optN parseVOther . partition isComponent =<< snd <$> get
+otherComponents = optN parseVOther . partition isComponent =<< fmap snd get
 
 parseVOther :: Content -> ContentParser VOther
 parseVOther (Component _ voName _) = do

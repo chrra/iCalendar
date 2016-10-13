@@ -112,6 +112,7 @@ class (Show r, Ord r) => HasRRule r where
     vExDate        :: r -> Set ExDate
     vRDate         :: r -> Set RDate
     vUpdate        :: r -> DTStart -> r
+    vUpdate r s    = vUpdateBoth r (s, Nothing)
     vUpdateBoth    :: r -> (DTStart, Maybe (Either DTEnd DurationProp)) -> r
     hasRecurrence  :: r -> Bool
     hasRecurrence r = not $ null (vRRule r) && null (vRDate r)
@@ -174,13 +175,12 @@ instance HasRRule VEvent where
     vRRule         = veRRule
     vExDate        = veExDate
     vRDate         = veRDate
-    vUpdate r s    = r {veDTStart = Just s}
     vUpdateBoth r (start, Just end) = r {veDTStart = Just start
                                     , veDTEndDuration = Just end}
     vUpdateBoth r (start, Nothing) = case (veDTStart r, vDTEndDuration r) of
         (Just s1, Just (Left dtend)) -> r {veDTStart = Just start
                 , veDTEndDuration = Just (Left (updateEndTime s1 start dtend))}
-        _                 -> vUpdate r start
+        _                 -> r {veDTStart = Just start}
 
 instance VRecurrence VEvent where
     vUid           = veUID
@@ -230,13 +230,12 @@ instance HasRRule VTodo where
     vRRule         = vtRRule
     vExDate        = vtExDate
     vRDate         = vtRDate
-    vUpdate r s    = r {vtDTStart = Just s}
     vUpdateBoth r (start, Just end) = r {vtDTStart = Just start
                                     , vtDueDuration = Just $ toDTEnd end}
     vUpdateBoth r (start, Nothing) = case (vDTStart r, vDTEndDuration r) of
         (Just s1, Just (Left dtend)) -> r {vtDTStart = Just start
                 , vtDueDuration = Just $ toDTEnd (Left (updateEndTime s1 start dtend))}
-        _                 -> vUpdate r start
+        _                 -> r {vtDTStart = Just start}
 
 toDTEnd :: Either DTEnd b -> Either Due b
 toDTEnd = let l (DTEnd x o) = Left (Due x o)
@@ -281,9 +280,8 @@ instance HasRRule VJournal where
     vRRule         = vjRRule
     vExDate        = vjExDate
     vRDate         = vjRDate
-    vUpdate r s    = r {vjDTStart = Just s}
     vUpdateBoth _ (_, Just _) = error "VJournal can't update end time because it has not end time"
-    vUpdateBoth r (start, Nothing) = vUpdate r start
+    vUpdateBoth r (start, Nothing) = r {vjDTStart = Just start}
 
 instance VRecurrence VJournal where
     vUid           = vjUID
