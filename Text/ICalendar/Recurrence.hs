@@ -80,7 +80,10 @@ vCalendarTZIDToOffsets vcal tz time = join $ flip vTimeZoneToTimeToOffset time <
 
 vTimeZoneToTimeToOffset :: VTimeZone -> TimeToOffset -- LocalTime -> Maybe TimeZone
 vTimeZoneToTimeToOffset vtz = let
-    getTZ xs lt = tzPropToTimeZone vtz . rItem <$> L.find (cond lt) xs
+    getTZ xs lt = tzPropToTimeZone vtz . rItem <$> findP (cond lt) xs
+    findP _ []       = Nothing
+    findP f [x]      = if f x then Nothing else Just x
+    findP f (x:y:xs) = if f y then Just x else findP f (y:xs)
     cond lt rtz = case rIStartDateUtc rtz of
       Just t  -> t >= localTimeToUTC utc lt
       Nothing -> False

@@ -278,8 +278,8 @@ parseDates = parse (try dateParser <|> try timeParser) "parse dates"
     timezone = do
       tz <- try (string "EST") <|> try (string "EDT") <|> string "UTC"
       pure $ case tz of
-        "EST" -> TimeZone (-4 * 60) False "EST"
-        "EDT" -> TimeZone (-5 * 60) False "EDT"
+        "EST" -> TimeZone (-5 * 60) False "EST"
+        "EDT" -> TimeZone (-4 * 60) False "EDT"
         "UTC" -> TimeZone 0 False "UTC"
         _     -> error "Not Reachable"
     year :: Parsec ByteString () Integer
