@@ -3,21 +3,19 @@ module ContentSpec where
 
 import           Data.ByteString.Lazy          (ByteString)
 import qualified Data.ByteString.Lazy          as BL
-import qualified Data.CaseInsensitive          as CI
-import           Data.Default
 import           Data.Monoid                   ((<>))
 import           Data.Text.Lazy                (Text)
 import qualified Data.Text.Lazy.Encoding       as Enc
 import           Test.Hspec
 
-import           Text.ICalendar.Parser.Content
+import           Text.ICalendar.Content
 
 
 p :: ByteString -> [Content]
-p = either error id . parseToContent def
+p = either error id . parseToContent
 
 notP :: ByteString -> ()
-notP = either (const ()) (error . show) . parseToContent def
+notP = either (const ()) (error . show) . parseToContent
 
 enc :: Text -> ByteString
 enc = Enc.encodeUtf8
@@ -84,7 +82,7 @@ comp3 = "begin:vcalendar\r\n\
 
 
 spec :: Spec
-spec = do
+spec =
     describe "parseToContent" $ do
 
         context "line" $ do
@@ -174,10 +172,6 @@ spec = do
                 p comp2 `shouldBe` compResult
 
         context "edge" $ do
-            it "parses latin1" $
-                parseToContent (DecodingFunctions Enc.decodeLatin1 (CI.mk . Enc.decodeLatin1))
-                               "A;X=\"\216\":Z"
-                    `shouldBe` (Right [ContentLine 1 "A" [("X", ["Ø"])] "Z"])
             it "fails UTF8 names" $
                 notP (enc "Ø:") `shouldBe` ()
             it "fails UTF8 parameter names" $

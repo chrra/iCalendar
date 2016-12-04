@@ -1,6 +1,6 @@
-module Text.ICalendar ( module X ) where
+module Text.ICalendar
+    ( module X
+    ) where
 
-import Text.ICalendar.Parser as X
-import Text.ICalendar.Printer as X
-import Text.ICalendar.Types as X
-import Text.ICalendar.Recurrence as X
+import           Text.ICalendar.Content    as X
+import           Text.ICalendar.Parameters as X
