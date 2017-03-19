@@ -4,4 +4,4 @@ packages:
 - '.'
 extra-deps:
 - mime-0.4.0.2
-resolver: lts-7.1
+resolver: lts-8.5

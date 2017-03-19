@@ -73,23 +73,20 @@ rRuleToRRuleFunc' rrule r = (untilComponent r . byComponent . freqComponent) r
         byRulesDay = foldr ((++) . sortUniq . byRulesDay' . pure) []
 
 freq :: Recur -> LocalTime -> [LocalTime]
-freq recur r = r : freq recur rnew
-  where
-    rnew = ( case recurFreq recur of
-      Secondly -> addSeconds (1 :: Integer)
-      Minutely -> addSeconds (60 :: Integer)
-      Hourly   -> addSeconds (3600 :: Integer)
-      Daily    -> updateDay (addDays 1)
-      Weekly   -> updateDay (addDays 7)
+freq recur = case recurFreq recur of
+      Secondly -> iterate $ addSeconds (1 :: Integer)
+      Minutely -> iterate $ addSeconds (60 :: Integer)
+      Hourly   -> iterate $ addSeconds (3600 :: Integer)
+      Daily    -> iterate $ updateDay (addDays 1)
+      Weekly   -> iterate $ updateDay (addDays 7)
       -- Technically clipping the month is incorrect. Dates which are invalid should be ignored
       -- However the ByRules need to expand before removing invalid dates. This really should be
       -- accomplished by storing the date in a Y M D datastructure and remove invalid entries as a post process.
       -- Day (The day component of LocalTime) is just an Integer type from a specific
       -- day so these methods would need to use a seperate datatype. For that reason be are not going
       -- to expose most functions in this module since the signatures aren't stable.
-      Monthly  -> updateDay (addGregorianMonthsClip 1)
-      Yearly   -> updateDay (addGregorianYearsClip 1)
-      ) r
+      Monthly  -> iterate $ updateDay (addGregorianMonthsClip 1)
+      Yearly   -> iterate $ updateDay (addGregorianYearsClip 1)
 
 interval :: Recur -> [LocalTime] -> [LocalTime]
 interval r (x:xs) = x : interval r (drop (recurInterval r - 1) xs)

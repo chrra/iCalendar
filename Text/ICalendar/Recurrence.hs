@@ -10,7 +10,6 @@ module Text.ICalendar.Recurrence
   ) where
 
 import qualified Data.Heap                          as H
-import qualified Data.List                          as L
 import qualified Data.Map                           as M
 import qualified Data.Set                           as S
 import           Data.Text.Lazy                     (unpack)
