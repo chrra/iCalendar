@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 module Text.ICalendar.Recurrence.Types
-  (TimeToOffset, TZIDToOffset, RItem(..)) where
+  (ICalError, TimeToOffset, TZIDToOffset, RItem(..), icalError) where
 
 import           Data.Text.Lazy (Text)
 import           Data.Time      (LocalTime, TimeZone, UTCTime)
@@ -9,8 +9,12 @@ import           Data.Typeable  (Typeable)
 import           GHC.Generics   (Generic)
 
 
-type TimeToOffset = LocalTime -> Maybe TimeZone
+type ICalError = [String]
+type TimeToOffset = LocalTime -> Either ICalError TimeZone
 type TZIDToOffset = Text -> TimeToOffset
+
+icalError :: String -> Either ICalError a
+icalError s = Left [s]
 
 -- RItem is a container for iterating over VRecurrence
 -- rIRecurrence is the recurrence datatstructure

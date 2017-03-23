@@ -24,13 +24,16 @@ import           Data.Time                      (Day, LocalTime (..), TimeOfDay,
 import           Data.Time.Calendar.OrdinalDate (fromOrdinalDate, toOrdinalDate)
 import           Data.Time.Calendar.WeekDate    (toWeekDate)
 import           Text.ICalendar.Types
+import           Text.ICalendar.Recurrence.Types
 
 -- Generates a Lazy expansion of an RRule given an initial HasRRule with a start date
 -- This is possibly infinite unless there is an Until or Count component specified
-rRuleToRRuleFunc :: HasRRule r => RRule -> r -> [r]
+rRuleToRRuleFunc :: HasRRule r => RRule -> r -> Either ICalError [r]
 rRuleToRRuleFunc rrule r = case vDTStart r of
-  Just (DTStart d o) -> vUpdate r . flip DTStart o . updateVDateTime d <$> rRuleToRRuleFunc' rrule (vDateTimeToLocalTime d)
-  Nothing -> [r]
+  Just (DTStart d o) -> do
+    rfunc <- rRuleToRRuleFunc' rrule (vDateTimeToLocalTime d)
+    pure $ vUpdate r . flip DTStart o . updateVDateTime d <$> rfunc
+  Nothing -> Right [r]
 
 vDateTimeToLocalTime :: VDateTime -> LocalTime
 vDateTimeToLocalTime (VDate d) = LocalTime (dateValue d) midnight
@@ -56,21 +59,29 @@ updateVDateTime (VDateTime dt) lt = VDateTime (uVDT dt)
 -- Since there are 7 days of the week plus leap years plus leap year exceptions plus intervals
 -- It would need to check cases for 7 * 4 * 2 * Interval Years before it detrmines that this function will lookup
 -- E.g. byMonth 2 byMonthDay 31 is a valid RRule but will loop.
-rRuleToRRuleFunc' :: RRule -> LocalTime -> [LocalTime]
-rRuleToRRuleFunc' rrule r = (untilComponent r . byComponent . freqComponent) r
+rRuleToRRuleFunc' :: RRule -> LocalTime -> Either ICalError [LocalTime]
+rRuleToRRuleFunc' rrule r = (\f -> (untilComponent r <$> f . freqComponent) r) <$> byComponent
   where recur = rRuleValue rrule
         -- Because of the way bySetPos needs to expand filters the by Components
         -- can start before the initial date so we need to drop previous dates
         untilComponent elm = rUntilCount recur . dropWhile (< elm)
         freqComponent = interval recur . freq recur
-        byComponent = bySetPos recur byRules
-        byRules =  bySecond recur . byMinute recur . byHour recur . byRulesDay
-        byRulesDay' = foldr1 (.) $ (\x -> x recur) <$>
-                    -- Some cases of the by*Day over expand the days and need to be refiltered.
-                    [ byWeekNoFilter, byMonthFilter
-                    , byDay, byMonthDay, byYearDay, byWeekNo, byMonth ]
+        byComponent :: Either ICalError ([LocalTime] -> [LocalTime])
+        byComponent = bySetPos recur <$> byRules
+        byRules :: Either ICalError ([LocalTime] -> [LocalTime])
+        byRules =  (\f -> bySecond recur . byMinute recur . byHour recur . f) <$> byRulesDay
         -- Sort and unique because some edge cases of byrule combinations can create duplicates
-        byRulesDay = foldr ((++) . sortUniq . byRulesDay' . pure) []
+        byRulesDay ::  Either ICalError ([LocalTime] -> [LocalTime])
+        byRulesDay = (\f -> foldr ((++) . sortUniq . f . pure) []) <$> byRulesDay'
+        byRulesDay' :: Either ICalError ([LocalTime] -> [LocalTime])
+        byRulesDay' = do
+          let month = byMonth recur
+          week <- byWeekNo recur
+          yearDay <- byYearDay recur
+          monthDay <- byMonthDay recur
+          day <- byDay recur
+          -- Some cases of the by*Day over expand the days and need to be refiltered.
+          pure $ (byMonthFilter recur) . (byWeekNoFilter recur) . day . monthDay . yearDay . week . month
 
 freq :: Recur -> LocalTime -> [LocalTime]
 freq recur = case recurFreq recur of
@@ -128,12 +139,12 @@ byMonthFilter recur
     = byMonthFilterF recur
   | otherwise = id
 
-byWeekNo :: Recur -> [LocalTime] -> [LocalTime]
+byWeekNo :: Recur -> Either ICalError ([LocalTime] ->[LocalTime])
 byWeekNo recur
-  | null (recurByWeekNo recur) = id
-  | recurFreq recur <= Weekly = byWeekNoFilterF recur -- Technically not valid need this function anyways.
-  | recurFreq recur == Yearly = expandWeekNo (recurWkSt recur) (recurByWeekNo recur)
-  | otherwise = error $ "BYWEEKNO is only Valid for Yearly Rules. Not " ++
+  | null (recurByWeekNo recur) = Right id
+  | recurFreq recur <= Weekly = Right $ byWeekNoFilterF recur -- Technically not valid need this function anyways.
+  | recurFreq recur == Yearly = Right $ expandWeekNo (recurWkSt recur) (recurByWeekNo recur)
+  | otherwise = icalError $ "BYWEEKNO is only Valid for Yearly Rules. Not " ++
       show (recurFreq recur) ++ " for " ++ show recur
 
 
@@ -185,14 +196,14 @@ byWeekNoFilter recur
   | not (null (recurByWeekNo recur)) && recurFreq recur == Yearly = byWeekNoFilterF recur
   | otherwise = id
 
-byYearDay :: Recur -> [LocalTime] -> [LocalTime]
+byYearDay :: Recur -> Either ICalError ([LocalTime] -> [LocalTime])
 byYearDay recur
-  | null (recurByYearDay recur) = id
-  | recurFreq recur <= Daily = filterDay f
-  | recurFreq recur == Weekly = error $ "BYYEARDAY can't be used with a Weekly rule for " ++ show recur
-  | recurFreq recur == Monthly = error $ "BYYEARDAY can't be used with a Monthly rule for " ++ show recur
-  | recurFreq recur == Yearly = expandDay (recurByYearDay recur) yearIter
-  | otherwise = error "Not reachable"
+  | null (recurByYearDay recur) = Right id
+  | recurFreq recur <= Daily = Right $ filterDay f
+  | recurFreq recur == Weekly = icalError $ "BYYEARDAY can't be used with a Weekly rule for " ++ show recur
+  | recurFreq recur == Monthly = icalError $ "BYYEARDAY can't be used with a Monthly rule for " ++ show recur
+  | recurFreq recur == Yearly = Right $ expandDay (recurByYearDay recur) yearIter
+  | otherwise = icalError "By year day otherwise case should not be reachable"
       where
         f d = day `elem` xs || dayAlt `elem` xs
           where
@@ -200,15 +211,15 @@ byYearDay recur
             dayAlt = day - yearLength year - 1
             (year, day) = toOrdinalDate d
 
-byMonthDay :: Recur -> [LocalTime] -> [LocalTime]
+byMonthDay :: Recur -> Either ICalError ([LocalTime] -> [LocalTime])
 byMonthDay recur
-  | null (recurByMonthDay recur) = id
-  | recurFreq recur <= Daily = filterDay f
-  | not (null (recurByYearDay recur)) = filterDay f
-  | recurFreq recur == Weekly = error $ "BYMONTHDAY can't be used with a Weekly rule for " ++ show recur
-  | recurFreq recur == Monthly = expandDay (recurByMonthDay recur) monthIter
-  | recurFreq recur == Yearly = expandDay (recurByMonthDay recur) monthIter
-  | otherwise = error "Not reachable"
+  | null (recurByMonthDay recur) = Right id
+  | recurFreq recur <= Daily = Right $ filterDay f
+  | not (null (recurByYearDay recur)) = Right $ filterDay f
+  | recurFreq recur == Weekly = icalError $ "BYMONTHDAY can't be used with a Weekly rule for " ++ show recur
+  | recurFreq recur == Monthly = Right $ expandDay (recurByMonthDay recur) monthIter
+  | recurFreq recur == Yearly = Right $ expandDay (recurByMonthDay recur) monthIter
+  | otherwise = icalError "otherwise by month day should not be reachable"
       where
         f d = day `elem` xs || dayAlt `elem` xs
           where
@@ -224,17 +235,17 @@ expandDay recurL iter = updateDays $ filterDuplicateSorted . L.sort . catMaybes 
           day = if i > 0 then addDays (fromIntegral i - 1) a else addDays (fromIntegral i + 1) b
           in if day >= a && day <= b then Just day else Nothing
 
-byDay :: Recur -> [LocalTime] -> [LocalTime]
+byDay :: Recur ->  Either ICalError ([LocalTime] -> [LocalTime])
 byDay recur
-  | null (recurByDay recur) = id
-  | recurFreq recur <= Daily = filterDay f
-  | not (null (recurByYearDay recur)) = filterDay f
-  | not (null (recurByMonthDay recur)) = filterDay f
-  | recurFreq recur == Weekly = expand (weekIter (recurWkSt recur))
-  | recurFreq recur == Yearly && not (null (recurByWeekNo recur)) = expand (weekIter (recurWkSt recur))
-  | monthly = expand monthIter
-  | recurFreq recur == Yearly = expand yearIter
-  | otherwise = error "Not reachable"
+  | null (recurByDay recur) = Right id
+  | recurFreq recur <= Daily = Right $ filterDay f
+  | not (null (recurByYearDay recur)) = Right $ filterDay f
+  | not (null (recurByMonthDay recur)) = Right $ filterDay f
+  | recurFreq recur == Weekly = Right $ expand (weekIter (recurWkSt recur))
+  | recurFreq recur == Yearly && not (null (recurByWeekNo recur)) = Right $ expand (weekIter (recurWkSt recur))
+  | monthly = Right $ expand monthIter
+  | recurFreq recur == Yearly = Right $ expand yearIter
+  | otherwise = icalError "Otherwise byDay case should not be reachable"
     where
       -- This could probably be more efficient espically in the case of one Int Wkday pair
       expand :: (Day -> (Day, Day)) -> [LocalTime] -> [LocalTime]
