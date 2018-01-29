@@ -4,3 +4,4 @@ dist/
 shell.nix
 .cabal-sandbox
 cabal.sandbox.config
+.stack-work/
