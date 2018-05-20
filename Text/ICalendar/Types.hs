@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
 -- | ICalendar types, based on RFC5545.
@@ -11,8 +12,8 @@ import           Data.CaseInsensitive       (CI)
 import           Data.Default
 import           Data.Map                   (Map)
 import qualified Data.Map                   as M
-import           Data.Monoid
 import           Data.Set                   (Set)
+import           Data.Semigroup             as Sem
 import           Data.Text.Lazy             (Text, pack)
 import           Data.Time
 import           Data.Typeable              (Typeable)
@@ -73,23 +74,22 @@ instance Default VCalendar where
 -- with the highest 'LastModified', and 'VFreeBusy' with the highest 'DTStamp'.
 --
 -- If the Sequence, DTStamp or LastModified is the same, picks the left.
-instance Monoid VCalendar where
-    mempty = def
-    mappend a b = VCalendar { vcProdId     = vcProdId a
-                            , vcVersion    = vcVersion a
-                            , vcScale      = vcScale a
-                            , vcMethod     = vcMethod a
-                            , vcOther      = vcOther a <> vcOther b
-                            , vcTimeZones  = merge tz (vcTimeZones a)
-                                                      (vcTimeZones b)
-                            , vcEvents     = merge ev (vcEvents a) (vcEvents b)
-                            , vcTodos      = merge td (vcTodos a) (vcTodos b)
-                            , vcJournals   = merge jo (vcJournals a)
-                                                      (vcJournals b)
-                            , vcFreeBusys  = merge fb (vcFreeBusys a)
-                                                      (vcFreeBusys b)
-                            , vcOtherComps = vcOtherComps a <> vcOtherComps b
-                            }
+instance Sem.Semigroup VCalendar where
+    a <> b = VCalendar { vcProdId     = vcProdId a
+                       , vcVersion    = vcVersion a
+                       , vcScale      = vcScale a
+                       , vcMethod     = vcMethod a
+                       , vcOther      = vcOther a <> vcOther b
+                       , vcTimeZones  = merge tz (vcTimeZones a)
+                                                 (vcTimeZones b)
+                       , vcEvents     = merge ev (vcEvents a) (vcEvents b)
+                       , vcTodos      = merge td (vcTodos a) (vcTodos b)
+                       , vcJournals   = merge jo (vcJournals a)
+                                                 (vcJournals b)
+                       , vcFreeBusys  = merge fb (vcFreeBusys a)
+                                                 (vcFreeBusys b)
+                       , vcOtherComps = vcOtherComps a <> vcOtherComps b
+                       }
       where merge f = M.mergeWithKey (((Just .) .) . const f) id id
             tz c d = if vtzLastMod c >= vtzLastMod d then c else d
             ev c d = if (veSeq c, veDTStamp c) >= (veSeq d, veDTStamp d)
@@ -99,6 +99,13 @@ instance Monoid VCalendar where
             jo c d = if (vjSeq c, vjDTStamp c) >= (vjSeq d, vjDTStamp d)
                         then c else d
             fb c d = if vfbDTStamp c >= vfbDTStamp d then c else d
+
+
+instance Monoid VCalendar where
+    mempty = def
+#if !(MIN_VERSION_base(4,11,0))
+    mappend = (<>)
+#endif
 
 -- | Product Identifier. 3.7.3.
 data ProdId = ProdId
