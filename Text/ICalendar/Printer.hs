@@ -564,7 +564,7 @@ instance ToParam Dir where
     toParam (Dir x) = [("DIR", [(NeedQuotes, T.pack $ show x)])]
 
 instance ToParam DateTime where
-    toParam ZonedDateTime {..} = [("TZID", [(Optional, dateTimeZone)])]
+    toParam ZonedDateTime {..} = [("TZID", [(NoQuotes, dateTimeZone)])]
     toParam _ = []
 
 instance ToParam DTEnd where
