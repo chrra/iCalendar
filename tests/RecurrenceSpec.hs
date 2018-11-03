@@ -71,7 +71,7 @@ rruleTest (RecurTest desc icalData resultsL strict) = do
       dateMatchTest (outEventsF rule)
       where
         outRecurF =  map (vDateTimeToLocalTime . dtStartValue) . rruleF . head . M.elems . vcEvents . ical
-        rruleF r = catMaybes $ vDTStart <$> rRuleToRRuleFunc (head $ S.elems $ vRRule r) r
+        rruleF r = catMaybes $ vDTStart <$> (either (error . join) id) (rRuleToRRuleFunc (head $ S.elems $ vRRule r) r)
     specR (VTimeZoneTestData _) rule = dateMatchTest (outTimezoneF rule)
     specR (VCalendarTestData _) rule = dateMatchTest (outEventsF rule)
     dateMatchTest eventsList = do
@@ -80,8 +80,8 @@ rruleTest (RecurTest desc icalData resultsL strict) = do
       it "terminates or not terminates" $
         length (take numEntries eventsList) `shouldBe`
           if strict then length resultsUTC else numEntries
-    outEventsF = mapMaybe rIStartDateUtc . vEventList undefined . ical
-    outTimezoneF = mapMaybe rIStartDateUtc . vTimeZoneRecurrence . head . M.elems . vcTimeZones . ical
+    outEventsF = mapMaybe rIStartDateUtc . (either (error . join) id) . vEventList undefined . ical
+    outTimezoneF = mapMaybe rIStartDateUtc . (either (error . join) id) . vTimeZoneRecurrence . head . M.elems . vcTimeZones . ical
     results = foldl1 (++) (right . parseDates <$> resultsL)
     resultsLT = zonedTimeToLocalTime <$> results
     resultsUTC = zonedTimeToUTC <$> results
@@ -278,8 +278,8 @@ parseDates = parse (try dateParser <|> try timeParser) "parse dates"
     timezone = do
       tz <- try (string "EST") <|> try (string "EDT") <|> string "UTC"
       pure $ case tz of
-        "EST" -> TimeZone (-4 * 60) False "EST"
-        "EDT" -> TimeZone (-5 * 60) False "EDT"
+        "EST" -> TimeZone (-5 * 60) False "EST"
+        "EDT" -> TimeZone (-4 * 60) False "EDT"
         "UTC" -> TimeZone 0 False "UTC"
         _     -> error "Not Reachable"
     year :: Parsec ByteString () Integer
