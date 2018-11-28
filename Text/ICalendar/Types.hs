@@ -3,8 +3,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 -- | ICalendar types, based on RFC5545.
 module Text.ICalendar.Types
-    ( module Text.ICalendar.Types
-    ) where
+     where
 
 import           Codec.MIME.Type            (MIMEType)
 import           Data.ByteString.Lazy.Char8 (ByteString)
@@ -12,15 +11,15 @@ import           Data.CaseInsensitive       (CI)
 import           Data.Default
 import           Data.Map                   (Map)
 import qualified Data.Map                   as M
-import           Data.Set                   (Set)
 import           Data.Semigroup             as Sem
+import           Data.Set                   (Set)
 import           Data.Text.Lazy             (Text, pack)
 import           Data.Time
 import           Data.Typeable              (Typeable)
 import           Data.Version               (Version (..), showVersion)
 import           Network.URI                (URI)
 
-import Paths_iCalendar (version)
+import           Paths_iCalendar            (version)
 
 -- | Language.
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
