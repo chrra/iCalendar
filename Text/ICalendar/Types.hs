@@ -60,10 +60,7 @@ data VCalendar = VCalendar
     } deriving (Show, Eq, Ord, Typeable)
 
 instance Default VCalendar where
-    def = VCalendar (ProdId ("-//haskell.org/NONSGML iCalendar-" <>
-                             pack (showVersion version) <> "//EN") def)
-                    (MaxICalVersion (Version [2,0] []) def)
-                    def Nothing def def def def def def def
+    def = VCalendar def def def def def def def def def def def
 
 -- | 'vcMethod' is ignored at the moment.
 --
@@ -113,6 +110,9 @@ data ProdId = ProdId
     , prodIdOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
+instance ProdId where
+    def = ProdId ("-//haskell.org/NONSGML iCalendar-" <> pack (showVersion version) <> "//EN") def
+
 -- | Version. 3.7.4.
 data ICalVersion
     = MaxICalVersion
@@ -124,6 +124,9 @@ data ICalVersion
     , versionMin   :: Version
     , versionOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
+
+instance Default ICalVersion where
+    def = MaxICalVersion (Version [2,0] []) def
 
 -- | Calendar Scale. 3.7.1.
 data Scale = Scale
