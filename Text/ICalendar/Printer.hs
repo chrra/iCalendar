@@ -31,7 +31,6 @@ import qualified Data.Text.Lazy               as T
 import           Data.Time                    (FormatTime ())
 import qualified Data.Time                    as Time
 import qualified Data.Version                 as Ver
-import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM_)
 
 #if MIN_VERSION_time(1,5,0)
@@ -63,12 +62,12 @@ utf8Len c | o < 0x80  = 1
           | otherwise      = 6
   where o = ord c
 
-newtype AltRep = AltRep URI.URI
+newtype AltRep = AltRep Text
 newtype CN = CN Text
-newtype Dir = Dir URI.URI
-newtype Member = Member (Set URI.URI)
-newtype DelTo = DelTo (Set URI.URI)
-newtype DelFrom = DelFrom (Set URI.URI)
+newtype Dir = Dir Text
+newtype Member = Member (Set Text)
+newtype DelTo = DelTo (Set Text)
+newtype DelFrom = DelFrom (Set Text)
 newtype RSVP = RSVP Bool
 newtype SentBy = SentBy CalAddress
 
@@ -866,7 +865,7 @@ instance IsValue DTStart where
     printValue DTStartDateTime {..} = printValue dtStartDateTimeValue
     printValue DTStartDate {..} = printValue dtStartDateValue
 
-instance IsValue URI.URI where
+instance IsValue Text where
     printValue = printShow
 
 instance IsValue Duration where

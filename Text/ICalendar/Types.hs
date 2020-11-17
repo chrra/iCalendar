@@ -18,7 +18,6 @@ import           Data.Text.Lazy             (Text, pack)
 import           Data.Time
 import           Data.Typeable              (Typeable)
 import           Data.Version               (Version (..), showVersion)
-import           Network.URI                (URI)
 
 import Paths_iCalendar (version)
 
@@ -26,7 +25,7 @@ import Paths_iCalendar (version)
 newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
                    deriving (Eq, Show, Ord, Typeable)
 
-type CalAddress = URI
+type CalAddress = Text
 
 -- | One other parameter, either x-param or iana-param.
 data OtherParam = OtherParam (CI Text) [Text]
@@ -323,7 +322,7 @@ data VOther = VOther
 data Attachment
     = UriAttachment
     { attachFmtType :: Maybe MIMEType
-    , attachUri     :: URI
+    , attachUri     :: Text
     , attachOther   :: OtherParams
     }
     | BinaryAttachment
@@ -369,7 +368,7 @@ data Completed = Completed
 -- | Comment. 3.8.1.4.
 data Comment = Comment
     { commentValue    :: Text
-    , commentAltRep   :: Maybe URI
+    , commentAltRep   :: Maybe Text
     , commentLanguage :: Maybe Language
     , commentOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -377,7 +376,7 @@ data Comment = Comment
 -- | Description. 3.8.1.5.
 data Description = Description
     { descriptionValue    :: Text
-    , descriptionAltRep   :: Maybe URI
+    , descriptionAltRep   :: Maybe Text
     , descriptionLanguage :: Maybe Language
     , descriptionOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -392,7 +391,7 @@ data Geo = Geo
 -- | Location. 3.8.1.7.
 data Location = Location
     { locationValue    :: Text
-    , locationAltRep   :: Maybe URI
+    , locationAltRep   :: Maybe Text
     , locationLanguage :: Maybe Language
     , locationOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -415,7 +414,7 @@ instance Default Priority where
 -- | Resources. 3.8.1.10.
 data Resources = Resources
     { resourcesValue    :: Set Text
-    , resourcesAltRep   :: Maybe URI
+    , resourcesAltRep   :: Maybe Text
     , resourcesLanguage :: Maybe Language
     , resourcesOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -445,7 +444,7 @@ data JournalStatus
 -- | Summary. 3.8.1.12.
 data Summary = Summary
     { summaryValue    :: Text
-    , summaryAltRep   :: Maybe URI
+    , summaryAltRep   :: Maybe Text
     , summaryLanguage :: Maybe Language
     , summaryOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -597,7 +596,7 @@ data UTCOffset = UTCOffset
 
 -- | Time Zone URL. 3.8.3.5.
 data TZUrl = TZUrl
-    { tzUrlValue :: URI
+    { tzUrlValue :: Text
     , tzUrlOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
@@ -613,7 +612,7 @@ data Attendee = Attendee
     , attendeeDelFrom  :: Set CalAddress
     , attendeeSentBy   :: Maybe CalAddress
     , attendeeCN       :: Maybe Text
-    , attendeeDir      :: Maybe URI
+    , attendeeDir      :: Maybe Text
     , attendeeLanguage :: Maybe Language
     , attendeeOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -662,7 +661,7 @@ instance Default PartStat where
 -- | Contact. 3.8.4.2.
 data Contact = Contact
     { contactValue    :: Text
-    , contactAltRep   :: Maybe URI
+    , contactAltRep   :: Maybe Text
     , contactLanguage :: Maybe Language
     , contactOther    :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
@@ -673,7 +672,7 @@ data Contact = Contact
 data Organizer = Organizer
     { organizerValue    :: CalAddress
     , organizerCN       :: Maybe Text
-    , organizerDir      :: Maybe URI
+    , organizerDir      :: Maybe Text
     , organizerSentBy   :: Maybe CalAddress
     , organizerLanguage :: Maybe Language
     , organizerOther    :: OtherParams
@@ -714,7 +713,7 @@ instance Default RelationshipType where
 
 -- | Uniform Resource Locator. 3.8.4.6.
 data URL = URL
-    { urlValue :: URI
+    { urlValue :: Text
     , urlOther :: OtherParams
     } deriving (Show, Eq, Ord, Typeable)
 
