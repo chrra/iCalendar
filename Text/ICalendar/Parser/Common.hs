@@ -28,7 +28,6 @@ import           Data.Time                    (Day, LocalTime (LocalTime),
                                                TimeOfDay (), UTCTime (UTCTime))
 import qualified Data.Time                    as Time
 import           Data.Traversable             (mapM)
-import qualified Network.URI                  as URI
 import           Prelude                      hiding (mapM)
 
 #if MIN_VERSION_time(1,5,0)
@@ -146,10 +145,8 @@ parseDate bs = do
 
 -- {{{ Misc parsers
 
-parseURI :: String -> ContentParser URI.URI
-parseURI s = case URI.parseURI s of
-                  Just x -> return x
-                  Nothing -> throwError $  "Invalid URI: " ++ show s
+parseURI :: String -> ContentParser Text
+parseURI = pure . T.pack
 
 -- | Convert a 'DateTime' to 'UTCTime', giving an appropriate error.
 mustBeUTC :: DateTime -> ContentParser UTCTime
@@ -183,7 +180,7 @@ parseSimpleRead _ x = throwError $ "parseSimpleRead: " ++ show x
 -- | Parse something b with alternative representations, language
 -- specification, and 'OtherParams'.
 parseAltRepLang' :: ([Text] -> ContentParser b)
-                 -> (b -> Maybe URI.URI -> Maybe Language -> OtherParams -> a)
+                 -> (b -> Maybe Text -> Maybe Language -> OtherParams -> a)
                  -> Content -> ContentParser a
 parseAltRepLang' m f (ContentLine _ _ o bs) = do
     t <- m =<< parseText bs
@@ -195,7 +192,7 @@ parseAltRepLang' _ _ x = throwError $ "parseAltRepLang': " ++ show x
 
 -- | Parse something 'Text' with alternative representations, language
 -- specification, and 'OtherParams'.
-parseAltRepLang :: (Text -> Maybe URI.URI -> Maybe Language -> OtherParams -> a)
+parseAltRepLang :: (Text -> Maybe Text -> Maybe Language -> OtherParams -> a)
                 -> Content -> ContentParser a
 parseAltRepLang = parseAltRepLang' lenientTextOnlyOne
   where lenientTextOnlyOne :: [Text] -> ContentParser Text
@@ -207,14 +204,14 @@ parseAltRepLang = parseAltRepLang' lenientTextOnlyOne
 
 -- | Parse something '[Text]' with alternative representations, language
 -- specification, and 'OtherParams'.
-parseAltRepLangN :: (Set Text -> Maybe URI.URI -> Maybe Language
+parseAltRepLangN :: (Set Text -> Maybe Text -> Maybe Language
                               -> OtherParams -> a)
                 -> Content -> ContentParser a
 parseAltRepLangN = parseAltRepLang' (return . S.fromList)
 
 -- | Parse something simple with only a URI-field for the content, and
 -- 'OtherParams'.
-parseSimpleURI :: (URI.URI -> OtherParams -> a) -> Content -> ContentParser a
+parseSimpleURI :: (Text -> OtherParams -> a) -> Content -> ContentParser a
 parseSimpleURI f (ContentLine _ _ o bs) = do
     uri <- parseURI =<< asks (T.unpack . ($ bs) . dfBS2Text)
     return . f uri $ toO o

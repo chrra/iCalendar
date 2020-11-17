@@ -20,10 +20,6 @@ source-repository head
   type:              git
   location:          git://github.com/chrra/iCalendar.git
 
-flag network-uri
-   description: Get Network.URI from the network-uri package
-   default: True
-
 library
   exposed-modules:     Text.ICalendar.Types
                      , Text.ICalendar.Parser
