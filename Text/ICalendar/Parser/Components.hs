@@ -266,7 +266,7 @@ parseVFreeBusy (Component _ "VFreeBusy" _) = do
 parseVFreeBusy x = throwError $ "parseVFreeBusy: " ++ show x
 
 otherComponents :: ContentParser (Set VOther)
-otherComponents = optN parseVOther . partition isComponent =<< snd <$> get
+otherComponents = (optN parseVOther . partition isComponent) . snd =<< get
 
 parseVOther :: Content -> ContentParser VOther
 parseVOther (Component _ voName _) = do
