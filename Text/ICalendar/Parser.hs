@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 module Text.ICalendar.Parser
     ( parseICalendar
     , parseICalendarFile
@@ -41,7 +40,7 @@ parseICalendar s f bs = do
     a <- either (Left . show) Right $ runParser parseToContent s f bs
     when (null a) $ throwError "Missing content."
     let xs = map (runCP s . parseVCalendar) a
-    (x, w) <- ((flip.).) flip foldM ([], []) xs $ \(x, ws) (g, (pos, _), w) ->
+    (x, w) <- (flip.) . foldM xs ([], []) $ \(x, ws) (g, (pos, _), w) ->
              case g of
                   Left e -> Left $ show pos ++ ": " ++ e
                   Right y -> Right (y:x, w <> ws)
