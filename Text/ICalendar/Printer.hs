@@ -25,7 +25,6 @@ import           Data.Char                    (ord, toUpper)
 import           Data.Default
 import           Data.Foldable                (forM_, mapM_)
 import           Data.List                    (intersperse)
-import           Data.Maybe                   (maybe)
 import           Data.Monoid
 import           Data.Set                     (Set)
 import qualified Data.Set                     as S
@@ -754,7 +753,7 @@ printShowN :: Show a => [a] -> ContentPrinter ()
 printShowN = printN printShow
 
 printN :: (a -> ContentPrinter ()) -> [a] -> ContentPrinter ()
-printN = sequence_ . intersperse (putc ',') . map m
+printN m = sequence_ . intersperse (putc ',') . map m
 
 printShowUpper :: Show a => a -> ContentPrinter ()
 printShowUpper = out . T.pack . map toUpper . show
@@ -880,7 +879,7 @@ instance IsValue Duration where
         printShow durSecond >> putc 'S'
     printValue DurationWeek {..} = do
         when (durSign == Negative) $ putc '-'
-        out 'P'
+        putc 'P'
         printShow durWeek >> putc 'W'
 
 instance IsValue RecurrenceId where
@@ -911,7 +910,7 @@ ln :: ContentPrinter () -> ContentPrinter ()
 ln = (>> newline)
 
 tellBuild :: ByteString -> ContentPrinter ()
-tellBuild = tell . Bu.byteString "\r\n "
+tellBuild = tell . Bu.lazyByteString
 
 param :: (Text, [(Quoting, Text)]) -> ContentPrinter ()
 param (n, xs) = putc ';' >> out n >> putc '=' >> paramVals xs
@@ -959,7 +958,7 @@ putc8 c = do x <- get
              modify (1 +)
 
 foldLine :: ContentPrinter ()
-foldLine = tellBuild "\r\n " >> put 1
+foldLine = tell (Bu.byteString "\r\n ") >> put 1
 
 newline :: ContentPrinter ()
 newline = tellBuild "\r\n" >> put 0

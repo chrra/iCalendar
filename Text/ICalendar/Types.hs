@@ -29,7 +29,7 @@ newtype Language = Language (CI Text) -- TODO: RFC5646 types and parser.
 type CalAddress = URI
 
 -- | One other parameter, either x-param or iana-param.
-newtype OtherParam = OtherParam (CI Text) [Text]
+data OtherParam = OtherParam (CI Text) [Text]
                   deriving (Show, Eq, Ord, Typeable)
 
 -- | Other parameters, either x-param or other iana-param.
