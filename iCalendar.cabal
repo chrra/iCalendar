@@ -37,9 +37,9 @@ library
                      , Paths_iCalendar
 
   if flag(network-uri)
-    build-depends: network-uri >= 2.6, network >= 2.6 && < 2.9
+    build-depends: network-uri >= 2.6, network >= 2.6 && < 3.2
   else
-    build-depends: network >= 2.4 && < 2.9
+    build-depends: network >= 2.4 && < 3.2
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
