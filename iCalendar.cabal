@@ -37,16 +37,16 @@ library
                      , Paths_iCalendar
 
   if flag(network-uri)
-    build-depends: network-uri >= 2.6, network >= 2.6 && < 2.9
+    build-depends: network-uri >= 2.6, network >= 2.6 && < 3.2
   else
-    build-depends: network >= 2.4 && < 2.9
+    build-depends: network >= 2.4 && < 3.2
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
 
   build-depends:       base >=4.5 && <5, time >=1.5, data-default >=0.3
                      , case-insensitive >=0.4
-                     , bytestring >=0.10 && < 0.11, parsec >=3.1.0
+                     , bytestring >=0.10 && < 0.12, parsec >=3.1.0
                      , text, containers >= 0.5 && < 0.7, mime >=0.4.0.2
-                     , mtl >=2.1.0, old-locale, base64-bytestring ==1.0.*
+                     , mtl >=2.1.0, old-locale, base64-bytestring >=1.0 && <1.3
   ghc-options:       -Wall
