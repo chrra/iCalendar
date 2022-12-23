@@ -4,7 +4,7 @@ module Text.ICalendar.Parser.Content where
 import           Control.Applicative
 import           Control.Monad
 import           Data.ByteString.Lazy         (ByteString)
-import qualified Data.ByteString.Lazy.Builder as Bu
+import qualified Data.ByteString.Builder      as Bu
 import           Data.CaseInsensitive         (CI)
 import           Data.Char
 import           Data.Monoid
