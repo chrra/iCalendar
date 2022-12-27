@@ -9,7 +9,7 @@ import           Control.Monad.Error          hiding (mapM)
 import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
                                                modify)
-import qualified Data.ByteString.Lazy.Builder as Bu
+import qualified Data.ByteString.Builder      as Bu
 import           Data.ByteString.Lazy.Char8   (ByteString)
 import qualified Data.ByteString.Lazy.Char8   as B
 import           Data.CaseInsensitive         (CI)

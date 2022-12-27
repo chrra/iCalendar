@@ -16,8 +16,8 @@ import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
                                                modify, runRWS)
 import           Data.ByteString.Lazy         (ByteString)
-import           Data.ByteString.Lazy.Builder (Builder)
-import qualified Data.ByteString.Lazy.Builder as Bu
+import           Data.ByteString.Builder      (Builder)
+import qualified Data.ByteString.Builder      as Bu
 import qualified Data.ByteString.Lazy.Char8   as BS
 import qualified Data.CaseInsensitive         as CI
 import           Data.Char                    (ord, toUpper)
