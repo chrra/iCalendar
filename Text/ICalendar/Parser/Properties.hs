@@ -5,7 +5,8 @@
 module Text.ICalendar.Parser.Properties where
 
 import           Control.Applicative
-import           Control.Monad.Error          hiding (mapM)
+import           Control.Monad                (when, (<=<))
+import           Control.Monad.Except         hiding (mapM)
 import           Control.Monad.RWS            (asks)
 import qualified Data.ByteString.Base64.Lazy  as B64
 import qualified Data.ByteString.Lazy.Char8   as B

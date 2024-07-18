@@ -12,7 +12,7 @@ module Text.ICalendar.Parser
 
 import           Control.Applicative
 import           Control.Monad
-import           Control.Monad.Error
+import           Control.Monad.Except
 import           Control.Monad.RWS          (runRWS)
 import           Data.ByteString.Lazy       (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -70,4 +70,4 @@ parseICalFile = parseICalendarFile
 
 runCP :: DecodingFunctions -> ContentParser a
       -> (Either String a, (SourcePos, [Content]), [String])
-runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runErrorT
+runCP s = ((flip .) . flip) runRWS s (undefined, undefined) . runExceptT

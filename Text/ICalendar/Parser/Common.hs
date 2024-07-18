@@ -5,7 +5,8 @@ module Text.ICalendar.Parser.Common where
 
 import           Control.Applicative
 import           Control.Arrow                (second)
-import           Control.Monad.Error          hiding (mapM)
+import           Control.Monad                (when, unless, (<=<))
+import           Control.Monad.Except         hiding (mapM)
 import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
                                                modify)
@@ -50,7 +51,7 @@ data Content = ContentLine P.SourcePos (CI Text) [(CI Text, [Text])] ByteString
 
 type TextParser = P.Parsec ByteString DecodingFunctions
 
-type ContentParser = ErrorT String -- Fatal errors.
+type ContentParser = ExceptT String -- Fatal errors.
                             (RWS DecodingFunctions
                                  [String] -- Warnings.
                                  (P.SourcePos, [Content]))

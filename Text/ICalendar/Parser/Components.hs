@@ -5,7 +5,8 @@ module Text.ICalendar.Parser.Components where
 
 import           Control.Applicative
 import           Control.Arrow        ((&&&))
-import           Control.Monad.Error  hiding (mapM)
+import           Control.Monad        (when)
+import           Control.Monad.Except hiding (mapM)
 import           Control.Monad.RWS    (MonadState (get), tell)
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Foldable        as F
