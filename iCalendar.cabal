@@ -8,12 +8,12 @@ bug-reports:         http://github.com/chrra/iCalendar/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Christian Rødli Amble
-maintainer:          cra@cra.no
+maintainer:          jakob.schoettl@intensovet.de
 copyright:           (c) Tingtun
 stability:           experimental
 category:            Text
 build-type:          Simple
-tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.2
+tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.2, GHC==9.6.5
 cabal-version:       >=1.8
 
 source-repository head
