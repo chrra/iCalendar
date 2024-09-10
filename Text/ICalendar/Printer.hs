@@ -1,8 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TupleSections     #-}
-{-# LANGUAGE CPP #-}
 module Text.ICalendar.Printer
     ( EncodingFunctions(..)
     , printICalendar
@@ -23,6 +24,7 @@ import qualified Data.CaseInsensitive         as CI
 import           Data.Char                    (ord, toUpper)
 import           Data.Default
 import           Data.Foldable                (forM_, mapM_)
+import           Data.List                    (intersperse)
 import           Data.Monoid
 import           Data.Set                     (Set)
 import qualified Data.Set                     as S
@@ -317,12 +319,10 @@ instance IsProperty a => IsProperty (Set a) where
     printProperty = mapM_ printProperty
 
 instance IsProperty a => IsProperty (Maybe a) where
-    printProperty (Just x) = printProperty x
-    printProperty _ = return ()
+    printProperty = maybe (pure ()) printProperty
 
 instance (IsProperty a, IsProperty b) => IsProperty (Either a b) where
-    printProperty (Left x) = printProperty x
-    printProperty (Right x) = printProperty x
+    printProperty = either printProperty printProperty
 
 instance IsProperty FreeBusy where
     printProperty FreeBusy {..} = ln $ do
@@ -484,7 +484,7 @@ instance IsProperty RequestStatus where
     printProperty RequestStatus {..} = ln $ do
         prop "REQUEST-STATUS" $ toParam requestStatusLanguage <>
                                 toParam requestStatusOther
-        (\z -> case z of
+        (\case 
                     (x:xs) -> do printShow x
                                  sequence_ [putc '.' >> printShow y | y <- xs]
                     [] -> return ()) requestStatusCode
@@ -510,7 +510,7 @@ instance IsProperty OtherProperty where
     printProperty OtherProperty {..} = ln $ do
         out (CI.original otherName)
         mapM_ param $ toParam otherParams
-        out ":"
+        putc ':'
         bytestring otherValue
 
 instance IsProperty Trigger where
@@ -529,9 +529,9 @@ prop :: ToParam a
      -> ContentPrinter ()
 prop b x = do
     put (fromIntegral $ BS.length b)
-    tell (Bu.lazyByteString b)
+    tellBuild b
     mapM_ param $ toParam x
-    out ":"
+    putc ':'
 
 -- }}}
 -- {{{ Parameter "printers".
@@ -540,8 +540,7 @@ class ToParam a where
     toParam :: a -> [(Text, [(Quoting, Text)])]
 
 instance ToParam a => ToParam (Maybe a) where
-    toParam Nothing = []
-    toParam (Just x) = toParam x
+    toParam = maybe [] toParam
 
 instance ToParam a => ToParam (Set a) where
     toParam s = case S.maxView s of
@@ -754,8 +753,7 @@ printShowN :: Show a => [a] -> ContentPrinter ()
 printShowN = printN printShow
 
 printN :: (a -> ContentPrinter ()) -> [a] -> ContentPrinter ()
-printN m (x:xs) = m x >> sequence_ [putc ',' >> m x' | x' <- xs]
-printN _ _ = return ()
+printN m = sequence_ . intersperse (putc ',') . map m
 
 printShowUpper :: Show a => a -> ContentPrinter ()
 printShowUpper = out . T.pack . map toUpper . show
@@ -773,36 +771,31 @@ instance IsValue ICalVersion where
         putc ';'
         out . T.pack $ Ver.showVersion versionMax
 
+recurPart :: (a -> Bool) -> (a -> ContentPrinter ()) -> Text -> a -> ContentPrinter ()
+recurPart ch h t x = unless (ch x) (out t >> h x)
+
+recurPartNonEmpty :: ([a] -> ContentPrinter ()) -> Text -> [a] -> ContentPrinter ()
+recurPartNonEmpty = recurPart null
+
+recurShowNonEmpty :: Show a => Text -> [a] -> ContentPrinter ()
+recurShowNonEmpty = recurPartNonEmpty printShowN
+
 instance IsValue Recur where
     printValue Recur {..} = do
         out "FREQ="
         printShowUpper recurFreq
-        forM_ recurUntilCount $ \x ->
-            case x of
-                 Left y -> out ";UNTIL=" >> printValue y
-                 Right y -> out ";COUNT=" >> printShow y
-        when (recurInterval /= 1) $
-            out ";INTERVAL=" >> printShow recurInterval
-        unless (null recurBySecond) $
-            out ";BYSECOND=" >> printShowN recurBySecond
-        unless (null recurByMinute) $
-            out ";BYMINUTE=" >> printShowN recurByMinute
-        unless (null recurByHour) $
-            out ";BYHOUR=" >> printShowN recurByHour
-        unless (null recurByDay) $
-            out ";BYDAY=" >> printN printNWeekday recurByDay
-        unless (null recurByMonthDay) $
-            out ";BYMONTHDAY=" >> printShowN recurByMonthDay
-        unless (null recurByYearDay) $
-            out ";BYYEARDAY=" >> printShowN recurByYearDay
-        unless (null recurByWeekNo) $
-            out ";BYWEEKNO=" >> printShowN recurByWeekNo
-        unless (null recurByMonth) $
-            out ";BYMONTH=" >> printShowN recurByMonth
-        unless (null recurBySetPos) $
-            out ";BYSETPOS=" >> printShowN recurBySetPos
-        unless (recurWkSt == Monday) $
-            out ";WKST=" >> printValue recurWkSt
+        forM_ recurUntilCount (either ((out ";UNTIL=" >>) . printValue) ((out ";COUNT=" >>) . printShow))
+        recurPart (1 ==) printShow ";INTERVAL=" recurInterval
+        recurShowNonEmpty ";BYSECOND=" recurBySecond
+        recurShowNonEmpty ";BYMINUTE=" recurByMinute
+        recurShowNonEmpty ";BYHOUR=" recurByHour
+        recurPartNonEmpty (printN printNWeekday) ";BYDAY=" recurByDay
+        recurShowNonEmpty ";BYMONTHDAY=" recurByMonthDay
+        recurShowNonEmpty ";BYYEARDAY=" recurByYearDay
+        recurShowNonEmpty ";BYWEEKNO=" recurByWeekNo
+        recurShowNonEmpty ";BYMONTH=" recurByMonth
+        recurShowNonEmpty ";BYSETPOS=" recurBySetPos
+        recurPart (Monday ==) printValue ";WKST=" recurWkSt
 
 instance IsValue TimeTransparency where
     printValue Opaque {}      = out "OPAQUE"
@@ -886,7 +879,7 @@ instance IsValue Duration where
         printShow durSecond >> putc 'S'
     printValue DurationWeek {..} = do
         when (durSign == Negative) $ putc '-'
-        out "P"
+        putc 'P'
         printShow durWeek >> putc 'W'
 
 instance IsValue RecurrenceId where
@@ -914,19 +907,20 @@ instance IsValue Attachment where
 -- {{{ Lib
 
 ln :: ContentPrinter () -> ContentPrinter ()
-ln x = x >> newline
+ln = (>> newline)
+
+tellBuild :: ByteString -> ContentPrinter ()
+tellBuild = tell . Bu.lazyByteString
 
 param :: (Text, [(Quoting, Text)]) -> ContentPrinter ()
 param (n, xs) = putc ';' >> out n >> putc '=' >> paramVals xs
 
 paramVals :: [(Quoting, Text)] -> ContentPrinter ()
-paramVals (x:xs) = paramVal x >> sequence_ [putc ',' >> paramVal x' | x' <- xs]
-paramVals _ = return ()
+paramVals = printN paramVal
 
 paramVal :: (Quoting, Text) -> ContentPrinter ()
-paramVal (NeedQuotes, t) = putc '"' >> out t >> putc '"'
 paramVal (NoQuotes, t) = out t
-paramVal (_, t) = paramVal (NeedQuotes, t)
+paramVal (_, t) = putc '"' >> out t >> putc '"'
 
 texts :: [Text] -> ContentPrinter ()
 texts (x:xs) = text x >> sequence_ [putc ',' >> text x' | x' <- xs]
@@ -955,23 +949,23 @@ putc c = do x <- get
             let cl = clen c
             when (x + cl > 75) foldLine
             tell $ b c
-            modify (+ cl)
+            modify (cl +)
 
 putc8 :: Char -> ContentPrinter ()
 putc8 c = do x <- get
              when (x >= 75) foldLine
              tell $ Bu.char8 c
-             modify (+ 1)
+             modify (1 +)
 
 foldLine :: ContentPrinter ()
 foldLine = tell (Bu.byteString "\r\n ") >> put 1
 
 newline :: ContentPrinter ()
-newline = tell (Bu.byteString "\r\n") >> put 0
+newline = tellBuild "\r\n" >> put 0
 
 -- | Output a whole line. Must be less than 75 bytes.
 line :: ByteString -> ContentPrinter ()
-line b = tell (Bu.lazyByteString b) >> newline
+line b = tellBuild b >> newline
 
 formatTime :: FormatTime t => String -> t -> String
 formatTime = Time.formatTime defaultTimeLocale

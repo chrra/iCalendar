@@ -100,7 +100,7 @@ parseRequestStatus (ContentLine _ "REQUEST-STATUS" o bs) = do
                                                show bs
                           Just <$> (valueOnlyOne =<< parseText (B.tail rest'))
     lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
-    let o' = filter (\(x, _) -> x `notElem` ["LANGUAGE"]) o
+    let o' = filter (("LANGUAGE" /=) . fst) o
     return $ RequestStatus (fromJust statcode) statdesc lang statext (toO o')
 parseRequestStatus x = throwError $ "parseRequestStatus: " ++ show x
 
@@ -122,7 +122,7 @@ parseCategories :: Content -> ContentParser Categories
 parseCategories (ContentLine _ "CATEGORIES" o bs) = do
     vals <- parseText bs
     lang <- mapM paramOnlyOne $ Language . CI.mk .: lookup "LANGUAGE" o
-    let o' = filter (\(x, _) -> x `notElem` ["LANGUAGE"]) o
+    let o' = filter (("LANGUAGE" /=) . fst) o
     return $ Categories (S.fromList vals) lang (toO o')
 parseCategories x = throwError $ "parseCategories: " ++ show x
 
@@ -381,7 +381,7 @@ parseUTCOffset (ContentLine _ n o bs)
         (t1:t2:m1:m2:sec) = map digitToInt rest
         (s1:s2:_) = sec
         sign x = if s == '-' then negate x else x
-    when (length str < 5 || any (not . isDigit) rest || s `notElem` ['+','-']
+    when (length str < 5 || not (all isDigit rest) || s `notElem` ['+','-']
                          || length sec `notElem` [0,2]) .
         throwError $ "parseUTCOffset: " ++ str
     return . UTCOffset (sign $ ((t1 * 10 + t2) * 60 + (m1 * 10 + m2)) * 60 +
