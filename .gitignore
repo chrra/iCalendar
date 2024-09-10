@@ -1,6 +1,7 @@
 *.swp
 *~
 dist/
+dist-newstyle/
 shell.nix
 .cabal-sandbox
 cabal.sandbox.config
