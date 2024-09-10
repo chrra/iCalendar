@@ -1,3 +1,4 @@
+cabal-version:       3.0
 name:                iCalendar
 version:             0.4.1.0
 synopsis:            iCalendar data types, parser, and printer.
@@ -5,7 +6,7 @@ description:         Data definitions, parsing and printing of the iCalendar
                      format (RFC5545).
 homepage:            http://github.com/chrra/iCalendar
 bug-reports:         http://github.com/chrra/iCalendar/issues
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Christian Rødli Amble
 maintainer:          jakob.schoettl@intensovet.de
@@ -14,13 +15,13 @@ stability:           experimental
 category:            Text
 build-type:          Simple
 tested-with:         GHC==7.10.3, GHC==8.0.2, GHC==8.2.2, GHC==8.4.2, GHC==9.6.5
-cabal-version:       >=1.8
 
 source-repository head
   type:              git
   location:          git://github.com/chrra/iCalendar.git
 
 library
+  default-language:    Haskell2010
   exposed-modules:     Text.ICalendar.Types
                      , Text.ICalendar.Parser
                      , Text.ICalendar.Printer
@@ -31,6 +32,8 @@ library
                      , Text.ICalendar.Parser.Parameters
                      , Text.ICalendar.Parser.Properties
                      , Paths_iCalendar
+
+  autogen-modules:     Paths_iCalendar
 
   if !impl(ghc >= 8.0)
     build-depends: semigroups == 0.18.*
