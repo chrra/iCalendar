@@ -7,7 +7,6 @@ import           Data.ByteString.Lazy         (ByteString)
 import qualified Data.ByteString.Builder      as Bu
 import           Data.CaseInsensitive         (CI)
 import           Data.Char
-import           Data.Monoid
 import           Data.Text.Lazy               (Text)
 
 import qualified Text.Parsec                 as P

@@ -6,7 +6,7 @@ module Text.ICalendar.Parser.Common where
 import           Control.Applicative
 import           Control.Arrow                (second)
 import           Control.Monad                (when, unless, (<=<))
-import           Control.Monad.Except         hiding (mapM)
+import           Control.Monad.Except
 import           Control.Monad.RWS            (MonadState (get, put),
                                                MonadWriter (tell), RWS, asks,
                                                modify)
