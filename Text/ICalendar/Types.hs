@@ -33,7 +33,7 @@ data OtherParam = OtherParam (CI Text) [Text]
                   deriving (Show, Eq, Ord, Typeable)
 
 -- | Other parameters, either x-param or other iana-param.
-data OtherParams = OtherParams (Set OtherParam)
+newtype OtherParams = OtherParams (Set OtherParam)
                    deriving (Show, Eq, Ord, Typeable)
 
 instance Default OtherParams where
@@ -451,7 +451,7 @@ data Summary = Summary
     } deriving (Show, Eq, Ord, Typeable)
 
 -- | Date. 3.3.4
-data Date = Date
+newtype Date = Date
     { dateValue :: Day
     } deriving (Show, Eq, Ord, Typeable)
 

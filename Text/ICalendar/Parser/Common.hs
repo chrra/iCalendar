@@ -322,26 +322,26 @@ down' x m = get >>= \old -> put x >> m <* put old
 -- | Many optional components named ...
 optCompN :: Ord a
          => CI Text -> (Content -> ContentParser a) -> ContentParser (Set a)
-optCompN s f = optN f . partition (`isComponentNamed` s) =<< snd <$> get
+optCompN s f = (optN f . partition (`isComponentNamed` s)) . snd =<< get
 
 -- | One required line named ...
 reqLine1 :: CI Text -> (Content -> ContentParser a) -> ContentParser a
-reqLine1 s f = req1 s f . partition (`isLineNamed` s) =<< snd <$> get
+reqLine1 s f = (req1 s f . partition (`isLineNamed` s)) . snd =<< get
 
 -- | One optional line named ...
 optLine1 :: Default b
          => CI Text -> (Content -> ContentParser b) -> ContentParser b
-optLine1 s f = opt1 f . partition (`isLineNamed` s) =<< snd <$> get
+optLine1 s f = (opt1 f . partition (`isLineNamed` s)) . snd =<< get
 
 -- | Many optional lines named ...
 optLineN :: Ord b
          => CI Text -> (Content -> ContentParser b) -> ContentParser (Set b)
-optLineN s f = optN f . partition (`isLineNamed` s) =<< snd <$> get
+optLineN s f = (optN f . partition (`isLineNamed` s)) . snd =<< get
 
 -- | Many lines named ..., at least one required.
 reqLineN :: Ord b
          => CI Text -> (Content -> ContentParser b) -> ContentParser (Set b)
-reqLineN s f = reqN s f . partition (`isLineNamed` s) =<< snd <$> get
+reqLineN s f = (reqN s f . partition (`isLineNamed` s)) . snd =<< get
 
 -- | One required ...
 req1 :: CI Text -> (Content -> ContentParser b) -> ([Content], [Content])
