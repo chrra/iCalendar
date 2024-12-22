@@ -4,7 +4,7 @@
 }:
 mkDerivation {
   pname = "iCalendar";
-  version = "0.4.1.0";
+  version = "0.4.1.1";
   src = ./.;
   libraryHaskellDepends = [
     base base64-bytestring bytestring case-insensitive containers
